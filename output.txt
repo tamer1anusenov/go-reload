@@ -67,9 +67,4 @@ Punctuation tests are... kinda boring, what do you think?
 
 lOW
 lOW
-
-low
-
-CAR
-
-Car
+can't don't doesn't 

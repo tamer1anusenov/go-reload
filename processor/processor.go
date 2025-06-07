@@ -24,6 +24,10 @@ func ProcessText(text string) string {
 
 	// Apply final formatting
 	text = formatPunctuation(text)
+
+	// Process contractions to ensure no spaces around apostrophes
+	text = processContractions(text)
+
 	text = fixArticles(text)
 
 	return text
@@ -222,4 +226,35 @@ func applyCaseTransformation(word, caseType string) string {
 	default:
 		return word
 	}
+}
+
+// processContractions ensures there are no spaces around apostrophes in contractions
+func processContractions(text string) string {
+	// Define common contractions
+	contractions := []string{
+		"can't", "don't", "doesn't", "won't", "isn't", "aren't",
+		"haven't", "hasn't", "hadn't", "couldn't", "wouldn't", "shouldn't",
+		"didn't", "it's", "that's", "there's", "he's", "she's", "what's",
+		"who's", "where's", "here's", "how's", "I'm", "you're", "we're",
+		"they're", "I've", "you've", "we've", "they've", "I'd", "you'd",
+		"he'd", "she'd", "we'd", "they'd", "I'll", "you'll", "he'll",
+		"she'll", "we'll", "they'll", "let's",
+	}
+
+	// Replace spaces in each contraction
+	for _, contraction := range contractions {
+		// Split the contraction at the apostrophe
+		parts := strings.Split(contraction, "'")
+		if len(parts) == 2 {
+			// Create regex patterns for space before/after apostrophe
+			beforePattern := regexp.MustCompile(`(?i)` + parts[0] + `\s+'` + parts[1])
+			afterPattern := regexp.MustCompile(`(?i)` + parts[0] + `'\s+` + parts[1])
+
+			// Replace with correct contraction
+			text = beforePattern.ReplaceAllString(text, contraction)
+			text = afterPattern.ReplaceAllString(text, contraction)
+		}
+	}
+
+	return text
 }

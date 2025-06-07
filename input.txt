@@ -67,7 +67,4 @@ Punctuation tests are ... kinda boring ,what do you think ?
 
 L(low)o(up)w(up)
 L(low)o(up)w(cap)
-
-LOW (cap(low(low))))))
-
-CAR (cap(up(up)))
+can't don't doesn't 
