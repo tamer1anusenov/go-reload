@@ -277,6 +277,43 @@ func formatQuotes(text string) string {
 	// Process the text line by line to preserve newlines
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
+		// Handle consecutive quotes first (like '''''')
+		// Count consecutive single quotes and format them as pairs with spaces
+		singleQuoteConsecutiveRegex := regexp.MustCompile(`'{3,}`)
+		line = singleQuoteConsecutiveRegex.ReplaceAllStringFunc(line, func(match string) string {
+			count := len(match)
+			pairs := count / 2
+			remainder := count % 2
+
+			result := strings.Repeat("'' ", pairs)
+			if remainder > 0 {
+				result += "'"
+			} else if len(result) > 0 {
+				// Remove trailing space from last pair
+				result = result[:len(result)-1]
+			}
+
+			return result
+		})
+
+		// Handle consecutive double quotes similarly
+		doubleQuoteConsecutiveRegex := regexp.MustCompile(`"{3,}`)
+		line = doubleQuoteConsecutiveRegex.ReplaceAllStringFunc(line, func(match string) string {
+			count := len(match)
+			pairs := count / 2
+			remainder := count % 2
+
+			result := strings.Repeat("\"\" ", pairs)
+			if remainder > 0 {
+				result += "\""
+			} else if len(result) > 0 {
+				// Remove trailing space from last pair
+				result = result[:len(result)-1]
+			}
+
+			return result
+		})
+
 		// Handle double quotes in this line
 		doubleQuoteRegex := regexp.MustCompile(`"(\s*)([^"]*?)(\s*)"(\s*)`)
 		line = doubleQuoteRegex.ReplaceAllStringFunc(line, func(match string) string {
