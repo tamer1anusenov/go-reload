@@ -21,7 +21,18 @@ DFGHJKL DFGHJKL ( low, 2 )
 (   ggg   gg   )
 
  a 'higher' (up)
-  (   higher ) (up)
+  (higher) (up)
+
+(this words up)(up, 2)
+((this home is high) (cap, 4)
+
+
+'             up           '               .  (up)
+(((((               LOWERRRNF)) (low)
+
+"hi there" (cap, 2)
+
+
 an 'car'
 a (hex)
 
@@ -41,7 +52,7 @@ ready,,,,, GO go GO ' GOG' (low, 2)
 a apple a hour 
 an car an article a eass
 AN BBallon AN APPLE A HOIUR
-
+ 
 
 it (cap) was the best of times, it was the worst of times (up) , it was the age of wisdom, it was the age of foolishness (cap, 6) , it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of darkness, it was the spring of hope, IT WAS THE (low, 3) winter of despair.
 

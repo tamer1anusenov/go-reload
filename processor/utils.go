@@ -125,6 +125,33 @@ func findWordBefore(text string, patternPos int) (word string, start, end int, q
 		}
 	}
 
+	// Check if we're at a closing parenthesis
+	if start > 0 && text[start-1] == ')' {
+		start-- // Move past the closing parenthesis
+
+		// Find the opening parenthesis, accounting for nested parentheses
+		parenCount := 1
+		for start > 0 && parenCount > 0 {
+			start--
+			if text[start] == '(' {
+				parenCount--
+			} else if text[start] == ')' {
+				parenCount++
+			}
+		}
+
+		// Extract content from inside parentheses
+		if start < end-1 {
+			// Include the parentheses in the positions for reconstruction
+			parenContent := text[start+1 : end-1] // Content between parentheses
+			parenContent = strings.TrimSpace(parenContent)
+			if parenContent != "" {
+				// Return the content with parentheses, marking it as quoted with '(' as the quote char
+				return parenContent, start, end, true, '('
+			}
+		}
+	}
+
 	// Normal word finding (no quotes)
 	// First check if we're immediately after punctuation
 	if end > 0 && isPunctuation(text[end-1]) {

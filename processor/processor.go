@@ -102,21 +102,28 @@ func findAllPatterns(text string) []PatternMatch {
 
 // applyAndRemovePattern applies transformation and removes the pattern
 func applyAndRemovePattern(text, pattern string, position int) string {
+	var result string
+
 	switch {
 	case pattern == "(hex)" || strings.Contains(pattern, "hex"):
-		return processHexAtPosition(text, position)
+		result = processHexAtPosition(text, position)
 	case pattern == "(bin)" || strings.Contains(pattern, "bin"):
-		return processBinAtPosition(text, position)
+		result = processBinAtPosition(text, position)
 	case pattern == "(up)" || (strings.Contains(pattern, "up") && !strings.Contains(pattern, ",")):
-		return processCaseAtPosition(text, position, "up", 1)
+		result = processCaseAtPosition(text, position, "up", 1)
 	case pattern == "(low)" || (strings.Contains(pattern, "low") && !strings.Contains(pattern, ",")):
-		return processCaseAtPosition(text, position, "low", 1)
+		result = processCaseAtPosition(text, position, "low", 1)
 	case pattern == "(cap)" || (strings.Contains(pattern, "cap") && !strings.Contains(pattern, ",")):
-		return processCaseAtPosition(text, position, "cap", 1)
+		result = processCaseAtPosition(text, position, "cap", 1)
 	case strings.Contains(pattern, ","):
-		return processNumberedCasePattern(text, pattern, position)
+		result = processNumberedCasePattern(text, pattern, position)
+	default:
+		// If no transformation applied, just remove the pattern
+		result = removePatternAt(text, pattern, position)
 	}
 
-	// If no transformation applied, just remove the pattern
-	return removePatternAt(text, pattern, position)
+	// Apply formatQuotes to handle spaces inside quotes
+	result = formatQuotes(result)
+
+	return result
 }

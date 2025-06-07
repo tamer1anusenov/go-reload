@@ -112,12 +112,12 @@ func processCaseAtPosition(text string, pos int, caseType string, count int) str
 		for i, word := range words {
 			switch caseType {
 			case "up":
-				transformedWords[i] = strings.ToUpper(word) // <-- ADD THIS LINE!
+				transformedWords[i] = strings.ToUpper(word)
 			case "cap":
 				caser := cases.Title(language.Und)
 				transformedWords[i] = caser.String(strings.ToLower(word))
 			case "low":
-				transformedWords[i] = strings.ToLower(word) // <-- You might be missing this too
+				transformedWords[i] = strings.ToLower(word)
 			default:
 				transformedWords[i] = word
 			}
@@ -129,8 +129,13 @@ func processCaseAtPosition(text string, pos int, caseType string, count int) str
 		// Add transformed words with original spacing and quotes if needed
 		for i, word := range transformedWords {
 			if quotedFlags[i] {
-				// Add quotes around the word
-				result += string(quoteChars[i]) + word + string(quoteChars[i])
+				if quoteChars[i] == '(' {
+					// Handle parenthesized text
+					result += "(" + word + ")"
+				} else {
+					// Handle quoted text
+					result += string(quoteChars[i]) + word + string(quoteChars[i])
+				}
 			} else {
 				result += word
 			}
@@ -191,11 +196,16 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 				wordStart := positions[i][0]
 				wordEnd := positions[i][1]
 
-				// Handle quoted words
+				// Handle quoted words and parenthesized text
 				if quotedFlags[i] {
-					// Replace with quoted transformed word
-					quoteChar := quoteChars[i]
-					result = result[:wordStart] + string(quoteChar) + transformedWords[i] + string(quoteChar) + result[wordEnd:]
+					if quoteChars[i] == '(' {
+						// Handle parenthesized text
+						result = result[:wordStart] + "(" + transformedWords[i] + ")" + result[wordEnd:]
+					} else {
+						// Handle quoted text
+						quoteChar := quoteChars[i]
+						result = result[:wordStart] + string(quoteChar) + transformedWords[i] + string(quoteChar) + result[wordEnd:]
+					}
 				} else {
 					// Replace with transformed word
 					result = result[:wordStart] + transformedWords[i] + result[wordEnd:]
