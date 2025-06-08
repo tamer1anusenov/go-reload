@@ -68,3 +68,9 @@ Punctuation tests are ... kinda boring ,what do you think ?
 L(low)o(up)w(up)
 L(low)o(up)w(cap)
 can't don't doesn't 
+
+hi 'hi' hi
+hi' hi' hi
+hi 'hi ' hi
+hi ' hi ' hi
+hi 'hi
