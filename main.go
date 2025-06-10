@@ -22,7 +22,7 @@ func main() {
 	if err == nil {
 		absOutputPath, err := filepath.Abs(outputFile)
 		if err == nil && absInputPath == absOutputPath {
-			fmt.Fprintf(os.Stderr, "Error: Input and output files cannot be the same\n")
+			fmt.Fprintf(os.Stderr, "Error: enter different file\n")
 			os.Exit(1)
 		}
 	}

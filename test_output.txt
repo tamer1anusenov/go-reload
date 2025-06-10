@@ -1,6 +1,0 @@
-Low )))
-CAR (uP)
-HELLO
-world
-text
-example 
