@@ -14,6 +14,8 @@ aaaaaaaaa. / / / /(-aaaa)aaaa*aaa&aaaa#aaaaaa@aaaaaaaaaaaa(up))t
 asdsdsd (up,101
 ad 
 10(bin)
+iii
+ffff(hex)
  "   I can' t believe it'  s already November     ,       " she said.
        'I can't believe it'  s already November   ,  ' she said.
 I was sitting over there ,and then BAMM !!
@@ -85,8 +87,17 @@ L(low)o(up)w(up)
 L(low)o(up)W(low)
 
 LOW (cap(low(low))))))
-CAR (up(up(low)))
+CAR (up(up(low(cap(low)))))
 HELLO (low(up(low(cap))))
 WORLD (cap(low(up(cap(low)))))
 TEXT (up(low(cap(up(low)))))
 EXAMPLE (low(cap(up(low(cap(up(low))))))) 
+
+iii(hex)
+
+546565454()
+
+ffii(hex)
+
+
+low(cap(up(low(up))))

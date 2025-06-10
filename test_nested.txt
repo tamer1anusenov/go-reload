@@ -1,6 +1,0 @@
-LOW (cap(low(low))))))
-CAR (up(up(low)))
-HELLO (low(up(low(cap))))
-WORLD (cap(low(up(cap(low)))))
-TEXT (up(low(cap(up(low)))))
-EXAMPLE (low(cap(up(low(cap(up(low))))))) 
