@@ -93,6 +93,119 @@ func isAlnum(s string) bool {
 	return len(s) > 0
 }
 
+// WordPosition represents a word with its position in text
+type WordPosition struct {
+	word  string
+	start int
+	end   int
+}
+
+// findWordsAfter finds specified number of words after the pattern position
+func findWordsAfter(text string, startPos int, count int) ([]WordPosition, error) {
+	if startPos >= len(text) {
+		return nil, fmt.Errorf("start position out of bounds")
+	}
+
+	var result []WordPosition
+	pos := startPos
+
+	// Skip any spaces immediately after the pattern
+	for pos < len(text) && unicode.IsSpace(rune(text[pos])) {
+		pos++
+	}
+
+	for i := 0; i < count && pos < len(text); i++ {
+		// Find the start of next word
+		wordStart := pos
+
+		// Skip any non-word characters
+		for wordStart < len(text) && !isWordChar(text[wordStart]) && text[wordStart] != '\'' && text[wordStart] != '"' && text[wordStart] != '(' {
+			wordStart++
+		}
+
+		if wordStart >= len(text) {
+			break
+		}
+
+		// Check for quoted text
+		if wordStart < len(text) && (text[wordStart] == '\'' || text[wordStart] == '"') {
+			quoteChar := text[wordStart]
+			endQuotePos := wordStart + 1
+
+			// Find the closing quote
+			for endQuotePos < len(text) && text[endQuotePos] != quoteChar {
+				endQuotePos++
+			}
+
+			if endQuotePos < len(text) && text[endQuotePos] == quoteChar {
+				// Found quoted text
+				quotedWord := strings.TrimSpace(text[wordStart+1 : endQuotePos])
+				result = append(result, WordPosition{
+					word:  quotedWord,
+					start: wordStart + 1,
+					end:   endQuotePos,
+				})
+				pos = endQuotePos + 1
+				continue
+			}
+		}
+
+		// Check for parenthesized text
+		if wordStart < len(text) && text[wordStart] == '(' {
+			parenCount := 1
+			endParenPos := wordStart + 1
+
+			// Find the closing parenthesis, accounting for nested parentheses
+			for endParenPos < len(text) && parenCount > 0 {
+				if text[endParenPos] == '(' {
+					parenCount++
+				} else if text[endParenPos] == ')' {
+					parenCount--
+				}
+				endParenPos++
+			}
+
+			if parenCount == 0 {
+				// Found parenthesized text
+				parenWord := strings.TrimSpace(text[wordStart+1 : endParenPos-1])
+				result = append(result, WordPosition{
+					word:  parenWord,
+					start: wordStart + 1,
+					end:   endParenPos - 1,
+				})
+				pos = endParenPos
+				continue
+			}
+		}
+
+		// Regular word
+		wordEnd := wordStart
+		for wordEnd < len(text) && isWordChar(text[wordEnd]) {
+			wordEnd++
+		}
+
+		if wordEnd > wordStart {
+			word := text[wordStart:wordEnd]
+			result = append(result, WordPosition{
+				word:  word,
+				start: wordStart,
+				end:   wordEnd,
+			})
+			pos = wordEnd
+		} else {
+			// If we couldn't find a word, move to the next character
+			pos++
+		}
+
+		// Skip spaces after the word
+		for pos < len(text) && unicode.IsSpace(rune(text[pos])) {
+			pos++
+		}
+	}
+
+	return result, nil
+}
+
 // findWordBefore finds the word immediately before the given position
 func findWordBefore(text string, patternPos int) (word string, start, end int, quoted bool, quoteChar byte) {
 	end = patternPos

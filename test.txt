@@ -94,10 +94,9 @@ TEXT (up(low(cap(up(low)))))
 EXAMPLE (low(cap(up(low(cap(up(low))))))) 
 
 iii(hex)
+(((((((((((((((((((((hello (up))))))))))))))))))))))
 
 546565454()
+If I make you BREAKFAST IN BED just say thank you instead of: how (cap, -3) did you get in my house (up, 2) ?
 
-ffii(hex)
-
-
-low(cap(up(low(up))))
+(cap)

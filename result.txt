@@ -74,7 +74,7 @@ There is no greater agony than bearing an untold story inside you.
 There is no greater agony than bearing an untold story inside you.
 Punctuation tests are... kinda boring, don't you think!?
 Punctuation tests are... kinda boring, don't you think!?
-If I make you breakfast in bed just say thank you instead of: How did you get in MY HOUSE?
+If I make you BREAKFAST IN BED just say thank you instead of: how Did You Get in MY HOUSE?
 If I make you breakfast in bed just say thank you instead of: How did you get in MY HOUSE?
 I have to pack 5 outfits. Packed 26 just to be sure
 I have to pack 5 outfits. Packed 26 just to be sure
@@ -94,10 +94,9 @@ TEXT (up(low(caP)))
 EXAMPLE (low(cap(up(low(caP))))) 
 
 iii
+(((((((((((((((((((((HELLO)))))))))))))))))))))
 
 546565454()
+If I make you BREAKFAST IN BED just say thank you instead of: how Did You Get in MY HOUSE?
 
-ffii
 
-
-low(cap(up(loW)))

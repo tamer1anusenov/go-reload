@@ -96,14 +96,15 @@ func findAllPatterns(text string) []PatternMatch {
 		})
 	}
 
-	// Find numbered patterns like (up,2), (low,3), etc. - with possible spaces
-	numberedRegex := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(\d+)\s*\)`)
+	// Find numbered patterns like (up,2), (low,3), (cap,-3) etc. - with possible spaces
+	// Updated regex to handle negative numbers
+	numberedRegex := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(-?\d+)\s*\)`)
 	matches := numberedRegex.FindAllStringIndex(text, -1)
 	for _, match := range matches {
 		patternText := text[match[0]:match[1]]
 		// Extract command and count
 		cmdMatches := regexp.MustCompile(`(up|low|cap)`).FindString(patternText)
-		countMatches := regexp.MustCompile(`\d+`).FindString(patternText)
+		countMatches := regexp.MustCompile(`-?\d+`).FindString(patternText)
 
 		patterns = append(patterns, PatternMatch{
 			text:     patternText,

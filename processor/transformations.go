@@ -167,13 +167,58 @@ func processCaseAtPosition(text string, pos int, caseType string, count int) str
 }
 
 func processNumberedCasePattern(text, pattern string, position int) string {
-	re := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(\d+)\s*\)`)
+	// Updated regex to handle negative numbers
+	re := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(-?\d+)\s*\)`)
 	matches := re.FindStringSubmatch(pattern)
 	if len(matches) == 3 {
 		caseType := matches[1]
 		count, _ := strconv.Atoi(matches[2])
 
-		// Apply transformation but don't let processCaseAtPosition remove pattern
+		// Handle negative count (count words after the pattern)
+		if count < 0 {
+			// Convert to positive for processing
+			absCount := -count
+
+			// Find the words after the pattern
+			wordsAfter, err := findWordsAfter(text, position+len(pattern), absCount)
+			if err == nil && len(wordsAfter) > 0 {
+				// Apply transformation to words
+				for i := 0; i < len(wordsAfter); i++ {
+					word := wordsAfter[i].word
+					transformedWord := ""
+
+					switch caseType {
+					case "cap":
+						caser := cases.Title(language.Und)
+						transformedWord = caser.String(strings.ToLower(word))
+					case "up":
+						transformedWord = strings.ToUpper(word)
+					case "low":
+						transformedWord = strings.ToLower(word)
+					default:
+						transformedWord = word
+					}
+
+					// Replace the word with transformed word
+					text = text[:wordsAfter[i].start] + transformedWord + text[wordsAfter[i].end:]
+
+					// Adjust positions of subsequent words based on length change
+					lengthDiff := len(transformedWord) - len(word)
+					for j := i + 1; j < len(wordsAfter); j++ {
+						wordsAfter[j].start += lengthDiff
+						wordsAfter[j].end += lengthDiff
+					}
+				}
+
+				// Remove the pattern
+				return removePatternAt(text, pattern, position)
+			}
+
+			// If no words found after, just remove the pattern
+			return removePatternAt(text, pattern, position)
+		}
+
+		// Handle positive count (original behavior - words before the pattern)
 		words, positions, quotedFlags, quoteChars := findWordsBefore(text, position, count)
 		if len(words) > 0 {
 			// Apply transformation to words

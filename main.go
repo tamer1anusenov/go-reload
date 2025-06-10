@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-reloaded/processor"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -15,6 +16,23 @@ func main() {
 
 	inputFile := os.Args[1]
 	outputFile := os.Args[2]
+
+	// Check if input and output files are the same
+	absInputPath, err := filepath.Abs(inputFile)
+	if err == nil {
+		absOutputPath, err := filepath.Abs(outputFile)
+		if err == nil && absInputPath == absOutputPath {
+			fmt.Fprintf(os.Stderr, "Error: Input and output files cannot be the same\n")
+			os.Exit(1)
+		}
+	}
+
+	// Check if input file exists
+	_, err = os.Stat(inputFile)
+	if os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "Error: Input file '%s' does not exist\n", inputFile)
+		os.Exit(1)
+	}
 
 	// Read input file
 	content, err := os.ReadFile(inputFile)
