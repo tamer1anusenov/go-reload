@@ -3,9 +3,6 @@ package processor
 import (
 	"regexp"
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // ProcessText applies all transformations to the input text
@@ -244,8 +241,7 @@ func processNoSpacePatterns(text string) string {
 		case "low":
 			transformedWord = strings.ToLower(word)
 		case "cap":
-			caser := cases.Title(language.Und)
-			transformedWord = caser.String(strings.ToLower(word))
+			transformedWord = capitalize(word)
 		default:
 			transformedWord = word
 		}
@@ -331,7 +327,7 @@ func isValidCommand(cmd string) bool {
 	return false
 }
 
-// processAdjacentCasePatterns handles special cases where case patterns are applied to adjacent characters
+// processAdjacentCasePatterns handles X(case) where X is a single character
 func processAdjacentCasePatterns(text string) string {
 	// Find patterns like X(case) where X is a single character and (case) is a case pattern
 	adjacentRegex := regexp.MustCompile(`([a-zA-Z])\(\s*(up|low|cap)\s*\)`)
@@ -369,8 +365,7 @@ func processAdjacentCasePatterns(text string) string {
 		case "low":
 			transformedChar = strings.ToLower(char)
 		case "cap":
-			caser := cases.Title(language.Und)
-			transformedChar = caser.String(strings.ToLower(char))
+			transformedChar = capitalize(char)
 		default:
 			transformedChar = char
 		}
@@ -378,21 +373,6 @@ func processAdjacentCasePatterns(text string) string {
 		// Replace the character and pattern with the transformed character
 		patternEnd := match[1]
 		text = text[:charStart] + transformedChar + text[patternEnd:]
-	}
-
-	return text
-}
-
-// processSpecialTestCases handles specific test cases that need direct replacement
-func processSpecialTestCases(text string) string {
-	// Replace "LOW (cap(low(low))))))" with "low"
-	if strings.Contains(text, "LOW (cap(low(low))))))") {
-		text = strings.Replace(text, "LOW (cap(low(low))))))", "low", -1)
-	}
-
-	// Replace "CAR (cap(up(up)))" with "CAR"
-	if strings.Contains(text, "CAR (cap(up(up)))") {
-		text = strings.Replace(text, "CAR (cap(up(up)))", "CAR", -1)
 	}
 
 	return text
@@ -442,62 +422,14 @@ func applyCaseTransformation(word, caseType string) string {
 	case "low":
 		return strings.ToLower(word)
 	case "cap":
-		caser := cases.Title(language.Und)
-		return caser.String(strings.ToLower(word))
+		return capitalize(word)
 	default:
 		return word
 	}
 }
 
-// processQuotesAndContractions handles both contractions and quoted text
-func processQuotesAndContractions(text string) string {
-	// First handle spacing around quotes
-	// 1. Ensure space before opening quote when preceded by a word
-	wordOpenQuotePattern := regexp.MustCompile(`(\w)('[a-zA-Z])`)
-	text = wordOpenQuotePattern.ReplaceAllString(text, "$1 $2")
-
-	// 2. Ensure space after closing quote when followed by a word
-	closeQuoteWordPattern := regexp.MustCompile(`([a-zA-Z]')(\w)`)
-	text = closeQuoteWordPattern.ReplaceAllString(text, "$1 $2")
-
-	// 3. Handle special case of standalone quotes with spaces inside
-	standaloneQuotePattern := regexp.MustCompile(`'\s+([a-zA-Z]+)\s+'`)
-	text = standaloneQuotePattern.ReplaceAllString(text, "'$1'")
-
-	// Now handle known contractions (no spaces around apostrophes)
-	contractions := []string{
-		"can't", "don't", "doesn't", "won't", "isn't", "aren't",
-		"haven't", "hasn't", "hadn't", "couldn't", "wouldn't", "shouldn't",
-		"didn't", "it's", "that's", "there's", "he's", "she's", "what's",
-		"who's", "where's", "here's", "how's", "I'm", "you're", "we're",
-		"they're", "I've", "you've", "we've", "they've", "I'd", "you'd",
-		"he'd", "she'd", "we'd", "they'd", "I'll", "you'll", "he'll",
-		"she'll", "we'll", "they'll", "let's",
-	}
-
-	// Fix spacing for contractions
-	for _, contraction := range contractions {
-		parts := strings.Split(contraction, "'")
-		if len(parts) == 2 {
-			beforePattern := regexp.MustCompile(`(?i)` + parts[0] + `\s+'` + parts[1])
-			afterPattern := regexp.MustCompile(`(?i)` + parts[0] + `'\s+` + parts[1])
-			text = beforePattern.ReplaceAllString(text, contraction)
-			text = afterPattern.ReplaceAllString(text, contraction)
-		}
-	}
-
-	return text
-}
-
 // processAdjacentCharPatterns handles patterns like L(low)o(up)w(up) where each character has its own case pattern
 func processAdjacentCharPatterns(text string) string {
-	// First, check for exact matches of known patterns
-	if strings.Contains(text, "L(low)o(up)w(up)") {
-		text = strings.Replace(text, "L(low)o(up)w(up)", "lOW", -1)
-	}
-	if strings.Contains(text, "L(low)o(up)w(cap)") {
-		text = strings.Replace(text, "L(low)o(up)w(cap)", "lOW", -1)
-	}
 
 	// More general approach for similar patterns
 	// Find sequences of character + case pattern

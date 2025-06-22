@@ -5,9 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"unicode"
 )
 
 // processHexAtPosition converts hex number before position and removes pattern
@@ -41,12 +39,12 @@ func processHexAtPosition(text string, pos int) string {
 				if hexValue <= 0x7FFFFFFFFFFFFFFF {
 					// Convert to decimal since it's within range
 					if decimal, err := strconv.ParseInt(hexPart, 16, 64); err == nil {
-						// Replace word and ALL consecutive (hex) patterns with single decimal
+						// Replace word with decimal but keep the pattern for now
 						before := text[:wordStart]
 						after := text[pos+5:] // +5 for "(hex)"
 
-						// Remove any consecutive (hex) patterns that follow
-						after = regexp.MustCompile(`^(\s*\(hex\))*`).ReplaceAllString(after, "")
+						// Remove the current (hex) pattern but NOT consecutive ones
+						// This allows successive transformations to work
 
 						// Add back the punctuation if it was present
 						result := before + strconv.FormatInt(decimal, 10)
@@ -66,9 +64,6 @@ func processHexAtPosition(text string, pos int) string {
 			// In both cases, just remove the (hex) pattern and keep original hex
 			before := text[:wordStart]
 			after := text[pos+5:] // +5 for "(hex)"
-
-			// Remove any consecutive (hex) patterns that follow
-			after = regexp.MustCompile(`^(\s*\(hex\))*`).ReplaceAllString(after, "")
 
 			// Keep the original hex value
 			result := before + hexPart
@@ -110,7 +105,7 @@ func processBinAtPosition(text string, pos int) string {
 
 		if isBin(binPart) {
 			if decimal, err := strconv.ParseInt(binPart, 2, 64); err == nil {
-				// Replace word and pattern with decimal
+				// Replace word with decimal but keep additional patterns
 				before := text[:wordStart]
 				after := text[pos+5:] // +5 for "(bin)"
 
@@ -140,8 +135,7 @@ func processCaseAtPosition(text string, pos int, caseType string, count int) str
 			case "up":
 				transformedWords[i] = strings.ToUpper(word)
 			case "cap":
-				caser := cases.Title(language.Und)
-				transformedWords[i] = caser.String(strings.ToLower(word))
+				transformedWords[i] = capitalize(word)
 			case "low":
 				transformedWords[i] = strings.ToLower(word)
 			default:
@@ -206,7 +200,7 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 		}
 
 		// Handle positive count - but limit to words in the current line only
-		words, positions := findWordsBeforeInLine(text, position, count)
+		words, positions, quotedFlags, quoteChars := findWordsBeforeInLine(text, position, count)
 
 		if len(words) > 0 {
 			// Apply transformation to words
@@ -214,8 +208,7 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 			for i, word := range words {
 				switch caseType {
 				case "cap":
-					caser := cases.Title(language.Und)
-					transformedWords[i] = caser.String(strings.ToLower(word))
+					transformedWords[i] = capitalize(word)
 				case "up":
 					transformedWords[i] = strings.ToUpper(word)
 				case "low":
@@ -223,12 +216,25 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 				}
 			}
 
-			// Reconstruct text with transformed words (work backwards to preserve positions)
+			// Reconstruct text with transformed words
 			result := text
 			for i := len(words) - 1; i >= 0; i-- {
 				wordStart := positions[i][0]
 				wordEnd := positions[i][1]
-				result = result[:wordStart] + transformedWords[i] + result[wordEnd:]
+				// Handle quoted words and parenthesized text
+				if quotedFlags[i] {
+					if quoteChars[i] == '(' {
+						// Handle parenthesized text
+						result = result[:wordStart] + "(" + transformedWords[i] + ")" + result[wordEnd:]
+					} else {
+						// Handle quoted text
+						quoteChar := quoteChars[i]
+						result = result[:wordStart] + string(quoteChar) + transformedWords[i] + string(quoteChar) + result[wordEnd:]
+					}
+				} else {
+					// Replace with transformed word
+					result = result[:wordStart] + transformedWords[i] + result[wordEnd:]
+				}
 			}
 
 			// Now remove the numbered pattern
@@ -240,9 +246,11 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 }
 
 // findWordsBeforeInLine finds specified number of actual words before the pattern, ignoring parentheses
-func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, [][]int) {
+func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, [][]int, []bool, []byte) {
 	words := []string{}
 	positions := [][]int{}
+	quotedFlags := []bool{}
+	quoteChars := []byte{}
 
 	// Find the start of the current line
 	lineStart := strings.LastIndex(text[:patternPos], "\n")
@@ -274,9 +282,11 @@ func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, []
 
 		words = append(words, word)
 		positions = append(positions, []int{absoluteStart, absoluteEnd})
+		quotedFlags = append(quotedFlags, isQuoted(word))
+		quoteChars = append(quoteChars, getQuoteChar(word))
 	}
 
-	return words, positions
+	return words, positions, quotedFlags, quoteChars
 }
 
 // normalizeSpaces reduces multiple spaces to a single space throughout the text
@@ -359,99 +369,48 @@ func handleConsecutivePunctuation(text string) string {
 	return text
 }
 
-// formatQuotes handles single quote formatting
+// formatQuotes handles single and double quote formatting
 func formatQuotes(text string) string {
 	// Process the text line by line to preserve newlines
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
-		// Handle consecutive quotes first (like '''''')
-		// Count consecutive single quotes and format them as pairs with spaces
-		singleQuoteConsecutiveRegex := regexp.MustCompile(`'{3,}`)
-		line = singleQuoteConsecutiveRegex.ReplaceAllStringFunc(line, func(match string) string {
-			count := len(match)
-			pairs := count / 2
-			remainder := count % 2
-
-			result := strings.Repeat("'' ", pairs)
-			if remainder > 0 {
-				result += "'"
-			} else if len(result) > 0 {
-				// Remove trailing space from last pair
-				result = result[:len(result)-1]
-			}
-
-			return result
-		})
-
-		// Handle consecutive double quotes similarly
-		doubleQuoteConsecutiveRegex := regexp.MustCompile(`"{3,}`)
-		line = doubleQuoteConsecutiveRegex.ReplaceAllStringFunc(line, func(match string) string {
-			count := len(match)
-			pairs := count / 2
-			remainder := count % 2
-
-			result := strings.Repeat("\"\" ", pairs)
-			if remainder > 0 {
-				result += "\""
-			} else if len(result) > 0 {
-				// Remove trailing space from last pair
-				result = result[:len(result)-1]
-			}
-
-			return result
-		})
-
-		// Handle double quotes in this line
-		doubleQuoteRegex := regexp.MustCompile(`"(\s*)([^"]*?)(\s*)"(\s*)`)
-		line = doubleQuoteRegex.ReplaceAllStringFunc(line, func(match string) string {
-			parts := regexp.MustCompile(`"(\s*)([^"]*?)(\s*)"(\s*)`).FindStringSubmatch(match)
-			if len(parts) == 5 {
-				content := parts[2]
-				spaceAfter := parts[4]
-
-				// If there was a space after the closing quote, preserve it
-				if spaceAfter != "" {
-					return "\"" + content + "\" "
-				}
-
-				// Check if the next character after the quote is alphanumeric
-				pos := strings.Index(line, match) + len(match)
-				if pos < len(line) && isWordChar(line[pos]) {
-					return "\"" + content + "\" "
-				}
-				return "\"" + content + "\""
-			}
-			return match
-		})
-
-		// Handle single quotes in this line
-		singleQuoteRegex := regexp.MustCompile(`'(\s*)([^']*?)(\s*)'(\s*)`)
-		line = singleQuoteRegex.ReplaceAllStringFunc(line, func(match string) string {
-			parts := regexp.MustCompile(`'(\s*)([^']*?)(\s*)'(\s*)`).FindStringSubmatch(match)
-			if len(parts) == 5 {
-				content := parts[2]
-				spaceAfter := parts[4]
-
-				// If there was a space after the closing quote, preserve it
-				if spaceAfter != "" {
-					return "'" + content + "' "
-				}
-
-				// Check if the next character after the quote is alphanumeric
-				pos := strings.Index(line, match) + len(match)
-				if pos < len(line) && isWordChar(line[pos]) {
-					return "'" + content + "' "
-				}
-				return "'" + content + "'"
-			}
-			return match
-		})
-
+		line = formatQuotesInLine(line)
 		lines[i] = line
 	}
-
-	// Join the lines back with newlines
 	return strings.Join(lines, "\n")
+}
+
+func formatQuotesInLine(line string) string {
+	// First handle consecutive quotes (3 or more)
+	line = handleConsecutiveQuotes(line, '\'')
+	line = handleConsecutiveQuotes(line, '"')
+
+	// Then handle quote pairing and formatting
+	line = formatQuoteType(line, '\'')
+	line = formatQuoteType(line, '"')
+
+	return line
+}
+
+func handleConsecutiveQuotes(line string, quoteChar rune) string {
+	quoteStr := string(quoteChar)
+	pattern := regexp.QuoteMeta(quoteStr) + `{3,}`
+	consecutiveRegex := regexp.MustCompile(pattern)
+
+	return consecutiveRegex.ReplaceAllStringFunc(line, func(match string) string {
+		count := len(match)
+		pairs := count / 2
+		remainder := count % 2
+
+		result := strings.Repeat(quoteStr+quoteStr+" ", pairs)
+		if remainder > 0 {
+			result += quoteStr
+		} else if len(result) > 0 {
+			// Remove trailing space from last pair
+			result = result[:len(result)-1]
+		}
+		return result
+	})
 }
 
 // formatParentheses handles spacing inside parentheses
@@ -476,65 +435,121 @@ func fixArticles(text string) string {
 	lines := strings.Split(text, "\n")
 
 	for i, line := range lines {
-		// Find all words in the line
-		wordRegex := regexp.MustCompile(`\b\w+\b`)
-		matches := wordRegex.FindAllStringSubmatch(line, -1)
-		matchIndices := wordRegex.FindAllStringIndex(line, -1)
+		// Find pattern: (any articles and spaces)(last article)(space)(non-article word)
+		// This regex captures everything before the last article, the last article, and the target word
+		sequenceRegex := regexp.MustCompile(`(\b(?:[aA]n?\s+)*)([aA]n?)\s+([a-zA-Z]\w*)`)
 
-		// Process each word from right to left to avoid position shifts
-		for j := len(matches) - 1; j >= 0; j-- {
-			word := matches[j][0]
-			wordStart := matchIndices[j][0]
+		line = sequenceRegex.ReplaceAllStringFunc(line, func(match string) string {
+			parts := sequenceRegex.FindStringSubmatch(match)
+			if len(parts) >= 4 {
+				precedingArticles := parts[1] // All articles before the last one (keep unchanged)
+				lastArticle := parts[2]       // The article immediately before the word (change this)
+				targetWord := parts[3]        // The actual word that determines a/an
 
-			// Skip if this word is an article itself
-			if strings.ToLower(word) == "a" || strings.ToLower(word) == "an" {
-				continue
-			}
+				// Skip if the "target word" is actually an article
+				lowerTargetWord := strings.ToLower(targetWord)
+				if lowerTargetWord == "a" || lowerTargetWord == "an" {
+					return match // Don't change anything
+				}
 
-			// Find the article immediately before this word (ignoring other articles)
-			beforeWord := line[:wordStart]
-
-			// Look for the last article before this word, skipping intervening articles
-			articleRegex := regexp.MustCompile(`\b([aA]|[aA][nN])\s+(?:(?:[aA]|[aA][nN])\s+)*$`)
-			articleMatch := articleRegex.FindStringSubmatch(beforeWord)
-
-			if len(articleMatch) >= 2 {
-				lastArticle := articleMatch[1]
-
-				// Check if word starts with vowel sound
-				firstChar := strings.ToLower(string(word[0]))
+				// Check if target word starts with vowel sound
+				firstChar := strings.ToLower(string(targetWord[0]))
 				needsAn := firstChar == "a" || firstChar == "e" || firstChar == "i" ||
 					firstChar == "o" || firstChar == "u" || firstChar == "h"
 
-				// Find the position of this article to replace
-				articlePos := strings.LastIndex(beforeWord, lastArticle)
-				if articlePos != -1 {
-					var newArticle string
-					if needsAn {
-						if lastArticle == "A" {
-							newArticle = "An"
-						} else {
-							newArticle = "an"
-						}
-					} else {
-						if strings.ToUpper(lastArticle) == lastArticle {
-							newArticle = "A"
-						} else {
-							newArticle = "a"
-						}
+				// Determine the correct article, preserving the case of the last article
+				var newLastArticle string
+				if needsAn {
+					if lastArticle == "A" {
+						newLastArticle = "An"
+					} else if lastArticle == "a" {
+						newLastArticle = "an"
+					} else { // already "An" or "an"
+						newLastArticle = lastArticle
 					}
-
-					// Only replace if it's different
-					if lastArticle != newArticle {
-						line = line[:articlePos] + newArticle + line[articlePos+len(lastArticle):]
+				} else {
+					if lastArticle == "A" || lastArticle == "An" {
+						newLastArticle = "A"
+					} else { // "a" or "an"
+						newLastArticle = "a"
 					}
 				}
+
+				return precedingArticles + newLastArticle + " " + targetWord
 			}
-		}
+			return match
+		})
 
 		lines[i] = line
 	}
 
 	// Join the lines back with newlines
 	return strings.Join(lines, "\n")
+}
+
+func formatQuoteType(line string, quoteChar rune) string {
+	runes := []rune(line)
+	result := make([]rune, 0, len(runes))
+
+	i := 0
+	for i < len(runes) {
+		if runes[i] == quoteChar {
+			// Check if we need to add space before the quote
+			if i > 0 && unicode.IsLetter(runes[i-1]) {
+				// Don't add space if the previous letter is 'n' or 't' (for contractions like don't, can't)
+				prevChar := unicode.ToLower(runes[i-1])
+				if prevChar != 'n' && prevChar != 't' {
+					// Add space before the quote if not already there
+					if len(result) > 0 && result[len(result)-1] != ' ' {
+						result = append(result, ' ')
+					}
+				}
+			}
+
+			// Found a quote
+			i++ // Move past the opening quote
+
+			// Find the closing quote
+			closeQuotePos := -1
+			for j := i; j < len(runes); j++ {
+				if runes[j] == quoteChar {
+					closeQuotePos = j
+					break
+				}
+			}
+
+			if closeQuotePos == -1 {
+				// No closing quote found, add one at the end
+				// Add the opening quote and content
+				result = append(result, quoteChar)
+				result = append(result, runes[i:len(runes)]...)
+				result = append(result, quoteChar)
+				break
+			} else {
+				// Found matching quote pair
+				content := runes[i:closeQuotePos]
+
+				// Clean up content - remove leading/trailing spaces
+				contentStr := strings.TrimSpace(string(content))
+
+				// Add formatted quote pair
+				result = append(result, quoteChar)
+				result = append(result, []rune(contentStr)...)
+				result = append(result, quoteChar)
+
+				// Check if we need a space after the closing quote
+				nextPos := closeQuotePos + 1
+				if nextPos < len(runes) && isWordChar(byte(runes[nextPos])) {
+					result = append(result, ' ')
+				}
+
+				i = nextPos
+			}
+		} else {
+			result = append(result, runes[i])
+			i++
+		}
+	}
+
+	return string(result)
 }
