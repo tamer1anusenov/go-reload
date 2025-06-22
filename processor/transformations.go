@@ -206,7 +206,7 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 		}
 
 		// Handle positive count - but limit to words in the current line only
-		words, positions, quotedFlags, quoteChars := findWordsBeforeInLine(text, position, count)
+		words, positions := findWordsBeforeInLine(text, position, count)
 
 		if len(words) > 0 {
 			// Apply transformation to words
@@ -223,25 +223,12 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 				}
 			}
 
-			// Reconstruct text with transformed words
+			// Reconstruct text with transformed words (work backwards to preserve positions)
 			result := text
 			for i := len(words) - 1; i >= 0; i-- {
 				wordStart := positions[i][0]
 				wordEnd := positions[i][1]
-				// Handle quoted words and parenthesized text
-				if quotedFlags[i] {
-					if quoteChars[i] == '(' {
-						// Handle parenthesized text
-						result = result[:wordStart] + "(" + transformedWords[i] + ")" + result[wordEnd:]
-					} else {
-						// Handle quoted text
-						quoteChar := quoteChars[i]
-						result = result[:wordStart] + string(quoteChar) + transformedWords[i] + string(quoteChar) + result[wordEnd:]
-					}
-				} else {
-					// Replace with transformed word
-					result = result[:wordStart] + transformedWords[i] + result[wordEnd:]
-				}
+				result = result[:wordStart] + transformedWords[i] + result[wordEnd:]
 			}
 
 			// Now remove the numbered pattern
@@ -252,29 +239,44 @@ func processNumberedCasePattern(text, pattern string, position int) string {
 	return removePatternAt(text, pattern, position)
 }
 
-// Helper function to find words before pattern but only within the same line
-func findWordsBeforeInLine(text string, patternPosition int, maxCount int) ([]string, [][2]int, []bool, []rune) {
+// findWordsBeforeInLine finds specified number of actual words before the pattern, ignoring parentheses
+func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, [][]int) {
+	words := []string{}
+	positions := [][]int{}
+
 	// Find the start of the current line
-	lineStart := strings.LastIndex(text[:patternPosition], "\n")
+	lineStart := strings.LastIndex(text[:patternPos], "\n")
 	if lineStart == -1 {
 		lineStart = 0
 	} else {
-		lineStart++ // Skip the newline character
+		lineStart++ // Move past the newline
 	}
 
-	// Only search within the current line (from lineStart to patternPosition)
-	lineText := text[lineStart:patternPosition]
+	// Extract text from line start to pattern position
+	lineText := text[lineStart:patternPos]
 
-	// Find words in the line text
-	words, relativePositions, quotedFlags, quoteChars := findWordsBefore(lineText, len(lineText), maxCount)
+	// Use regex to find all words (sequences of letters, numbers, underscores, etc.)
+	wordRegex := regexp.MustCompile(`\b[a-zA-Z0-9_]+\b`)
+	matches := wordRegex.FindAllStringSubmatch(lineText, -1)
+	matchIndices := wordRegex.FindAllStringIndex(lineText, -1)
 
-	// Adjust positions to be relative to the full text
-	absolutePositions := make([][2]int, len(relativePositions))
-	for i, pos := range relativePositions {
-		absolutePositions[i] = [2]int{pos[0] + lineStart, pos[1] + lineStart}
+	// Take the last 'count' words
+	startIdx := len(matches) - count
+	if startIdx < 0 {
+		startIdx = 0
 	}
 
-	return words, absolutePositions, quotedFlags, bytesToRunes(quoteChars)
+	for i := startIdx; i < len(matches); i++ {
+		word := matches[i][0]
+		// Adjust positions to be relative to the full text
+		absoluteStart := lineStart + matchIndices[i][0]
+		absoluteEnd := lineStart + matchIndices[i][1]
+
+		words = append(words, word)
+		positions = append(positions, []int{absoluteStart, absoluteEnd})
+	}
+
+	return words, positions
 }
 
 // normalizeSpaces reduces multiple spaces to a single space throughout the text
@@ -474,45 +476,61 @@ func fixArticles(text string) string {
 	lines := strings.Split(text, "\n")
 
 	for i, line := range lines {
-		// Convert "a/A" to "an/An" before vowel sounds (a, e, i, o, u, h)
-		// Also handle quotes - match 'a' before quoted words starting with vowels
-		aToAnRegex := regexp.MustCompile(`\b([aA])\s+((['"]?)([aeiouAEIOUhH]))`)
-		line = aToAnRegex.ReplaceAllStringFunc(line, func(match string) string {
-			parts := regexp.MustCompile(`\b([aA])\s+((['"]?)([aeiouAEIOUhH]))`).FindStringSubmatch(match)
-			if len(parts) == 5 {
-				article := parts[1]
-				quote := parts[3]    // Capture the quote if present
-				nextChar := parts[4] // The actual first character
+		// Find all words in the line
+		wordRegex := regexp.MustCompile(`\b\w+\b`)
+		matches := wordRegex.FindAllStringSubmatch(line, -1)
+		matchIndices := wordRegex.FindAllStringIndex(line, -1)
 
-				if article == "A" {
-					return "An " + quote + nextChar // Use "An" instead of "AN"
-				} else {
-					return "an " + quote + nextChar
-				}
+		// Process each word from right to left to avoid position shifts
+		for j := len(matches) - 1; j >= 0; j-- {
+			word := matches[j][0]
+			wordStart := matchIndices[j][0]
+
+			// Skip if this word is an article itself
+			if strings.ToLower(word) == "a" || strings.ToLower(word) == "an" {
+				continue
 			}
-			return match
-		})
 
-		// Convert "an/AN" to "a/A" before consonant sounds (everything except a,e,i,o,u,h)
-		// Also handle quotes - match 'an' before quoted words starting with consonants
-		anToARegex := regexp.MustCompile(`\b([aA][nN])\s+((['"]?)([bcdfgjklmnpqrstvwxyzBCDFGJKLMNPQRSTVWXYZ]))`)
-		line = anToARegex.ReplaceAllStringFunc(line, func(match string) string {
-			parts := regexp.MustCompile(`\b([aA][nN])\s+((['"]?)([bcdfgjklmnpqrstvwxyzBCDFGJKLMNPQRSTVWXYZ]))`).FindStringSubmatch(match)
-			if len(parts) == 5 {
-				article := parts[1]
-				quote := parts[3]    // Capture the quote if present
-				nextChar := parts[4] // The actual first character
+			// Find the article immediately before this word (ignoring other articles)
+			beforeWord := line[:wordStart]
 
-				if strings.ToUpper(article) == "AN" {
-					if article == "AN" {
-						return "A " + quote + nextChar
+			// Look for the last article before this word, skipping intervening articles
+			articleRegex := regexp.MustCompile(`\b([aA]|[aA][nN])\s+(?:(?:[aA]|[aA][nN])\s+)*$`)
+			articleMatch := articleRegex.FindStringSubmatch(beforeWord)
+
+			if len(articleMatch) >= 2 {
+				lastArticle := articleMatch[1]
+
+				// Check if word starts with vowel sound
+				firstChar := strings.ToLower(string(word[0]))
+				needsAn := firstChar == "a" || firstChar == "e" || firstChar == "i" ||
+					firstChar == "o" || firstChar == "u" || firstChar == "h"
+
+				// Find the position of this article to replace
+				articlePos := strings.LastIndex(beforeWord, lastArticle)
+				if articlePos != -1 {
+					var newArticle string
+					if needsAn {
+						if lastArticle == "A" {
+							newArticle = "An"
+						} else {
+							newArticle = "an"
+						}
 					} else {
-						return "a " + quote + nextChar
+						if strings.ToUpper(lastArticle) == lastArticle {
+							newArticle = "A"
+						} else {
+							newArticle = "a"
+						}
+					}
+
+					// Only replace if it's different
+					if lastArticle != newArticle {
+						line = line[:articlePos] + newArticle + line[articlePos+len(lastArticle):]
 					}
 				}
 			}
-			return match
-		})
+		}
 
 		lines[i] = line
 	}
