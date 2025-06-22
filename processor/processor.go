@@ -10,7 +10,51 @@ import (
 
 // ProcessText applies all transformations to the input text
 func ProcessText(text string) string {
-	// First, handle adjacent character patterns like L(low)o(up)w(up)
+	// // First, handle adjacent character patterns like L(low)o(up)w(up)
+	// text = processAdjacentCharPatterns(text)
+
+	// // Handle patterns directly attached to words (no space)
+	// text = processNoSpacePatterns(text)
+
+	// // Handle special cases of adjacent patterns
+	// text = processAdjacentCasePatterns(text)
+
+	// // Handle special test cases directly
+	// text = processSpecialTestCases(text)
+
+	// // Handle nested patterns like (cap(low(low)))
+	// text = processNestedPatterns(text)
+
+	// // Process remaining patterns sequentially from LEFT TO RIGHT
+	// text = processAllPatterns(text)
+
+	// // Apply final formatting
+	// text = formatPunctuation(text)
+
+	// // Process contractions and quotes to ensure proper spacing
+	// text = processQuotesAndContractions(text)
+
+	// text = fixArticles(text)
+
+	// return text
+
+	// First normalize spaces to ensure consistent processing
+	text = normalizeSpaces(text)
+
+	// Remove any leading spaces from each line
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimLeft(line, " ")
+	}
+	text = strings.Join(lines, "\n")
+
+	// Handle parenthesized character patterns like (L(low)O(low)W(low))
+	text = processParenthesizedCharPatterns(text)
+
+	// Handle nested patterns like (cap(low(low)))
+	text = processNestedPatterns(text)
+
+	// Handle adjacent character patterns like L(low)o(up)w(up)
 	text = processAdjacentCharPatterns(text)
 
 	// Handle patterns directly attached to words (no space)
@@ -19,12 +63,6 @@ func ProcessText(text string) string {
 	// Handle special cases of adjacent patterns
 	text = processAdjacentCasePatterns(text)
 
-	// Handle special test cases directly
-	text = processSpecialTestCases(text)
-
-	// Handle nested patterns like (cap(low(low)))
-	text = processNestedPatterns(text)
-
 	// Process remaining patterns sequentially from LEFT TO RIGHT
 	text = processAllPatterns(text)
 
@@ -32,9 +70,17 @@ func ProcessText(text string) string {
 	text = formatPunctuation(text)
 
 	// Process contractions and quotes to ensure proper spacing
-	text = processQuotesAndContractions(text)
+	//text = processQuotesAndContractions(text)
 
 	text = fixArticles(text)
+
+	// Final space normalization and ensure no leading spaces
+	text = normalizeSpaces(text)
+	lines = strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimLeft(line, " ")
+	}
+	text = strings.Join(lines, "\n")
 
 	return text
 }
@@ -83,7 +129,6 @@ type PatternMatch struct {
 	count    string
 }
 
-// findAllPatterns finds all transformation patterns in the text
 func findAllPatterns(text string) []PatternMatch {
 	var patterns []PatternMatch
 
@@ -112,12 +157,24 @@ func findAllPatterns(text string) []PatternMatch {
 		cmdMatches := regexp.MustCompile(`(up|low|cap)`).FindString(patternText)
 		countMatches := regexp.MustCompile(`-?\d+`).FindString(patternText)
 
-		patterns = append(patterns, PatternMatch{
-			text:     patternText,
-			position: match[0],
-			command:  cmdMatches,
-			count:    countMatches,
-		})
+		// Check if count is negative
+		if strings.HasPrefix(countMatches, "-") {
+			// For negative numbers, add pattern but mark it for removal only
+			patterns = append(patterns, PatternMatch{
+				text:     patternText,
+				position: match[0],
+				command:  "remove", // Special command to indicate removal only
+				count:    countMatches,
+			})
+		} else {
+			// For positive numbers, add normally
+			patterns = append(patterns, PatternMatch{
+				text:     patternText,
+				position: match[0],
+				command:  cmdMatches,
+				count:    countMatches,
+			})
+		}
 	}
 
 	return patterns
@@ -156,21 +213,30 @@ func processNoSpacePatterns(text string) string {
 	// Find patterns like "word(up)" or "word(low)" or "word(cap)"
 	noSpaceRegex := regexp.MustCompile(`(\w+)\(\s*(up|low|cap)\s*\)`)
 
-	// Keep processing until no more matches are found
-	for {
-		match := noSpaceRegex.FindStringSubmatchIndex(text)
-		if match == nil {
-			break
-		}
+	// Store all transformations to apply them in order
+	type transformation struct {
+		start int
+		end   int
+		word  string
+	}
+	var transformations []transformation
 
-		// Extract word and case type
+	// Find all matches first
+	matches := noSpaceRegex.FindAllStringSubmatchIndex(text, -1)
+	if matches == nil {
+		return text
+	}
+
+	// Collect all transformations
+	for _, match := range matches {
 		wordStart, wordEnd := match[2], match[3]
 		caseTypeStart, caseTypeEnd := match[4], match[5]
 
 		word := text[wordStart:wordEnd]
+
 		caseType := text[caseTypeStart:caseTypeEnd]
 
-		// Apply transformation to the entire word
+		// Apply transformation to the word
 		var transformedWord string
 		switch caseType {
 		case "up":
@@ -184,12 +250,85 @@ func processNoSpacePatterns(text string) string {
 			transformedWord = word
 		}
 
-		// Replace the word and pattern with the transformed word
-		patternEnd := match[1]
-		text = text[:wordStart] + transformedWord + text[patternEnd:]
+		transformations = append(transformations, transformation{
+			start: wordStart,
+			end:   match[1], // end of pattern
+			word:  transformedWord,
+		})
+	}
+
+	// Apply transformations from right to left to maintain correct positions
+	result := text
+	for i := len(transformations) - 1; i >= 0; i-- {
+		t := transformations[i]
+
+		// Add space after the word if it's not the last transformation
+		// and if there isn't already punctuation
+		if i < len(transformations)-1 && !isPunctuation(result[t.end]) {
+			result = result[:t.start] + t.word + " " + result[t.end:]
+		} else {
+			result = result[:t.start] + t.word + result[t.end:]
+		}
+	}
+
+	return result
+}
+
+func processNestedPatterns(text string) string {
+	// Pattern to match nested structures like (CAP(CAP(cap))), (cap(LOW)), etc.
+	// Must have at least 2 levels of parentheses
+	nestedPattern := regexp.MustCompile(`\([A-Za-z]+\([A-Za-z]+(?:\([A-Za-z]+(?:\([A-Za-z]+(?:\([A-Za-z]+\)[A-Za-z]*)*\)[A-Za-z]*)*\)[A-Za-z]*)*\)[A-Za-z]*\)`)
+
+	for {
+		match := nestedPattern.FindString(text)
+		if match == "" {
+			break // No more nested patterns found
+		}
+
+		// Extract the innermost command
+		innermost := extractInnermostCommand(match)
+		if innermost == "" {
+			// If we can't extract a valid command, remove the pattern
+			text = strings.Replace(text, match, "", 1)
+			continue
+		}
+
+		// Replace the entire nested pattern with just the innermost command
+		replacement := "(" + innermost + ")"
+		text = strings.Replace(text, match, replacement, 1)
 	}
 
 	return text
+}
+
+func extractInnermostCommand(pattern string) string {
+	// Find all commands within parentheses
+	commandPattern := regexp.MustCompile(`\(([A-Za-z]+)\)`)
+	matches := commandPattern.FindAllStringSubmatch(pattern, -1)
+
+	if len(matches) == 0 {
+		return ""
+	}
+
+	// Return the last (innermost) command found
+	innermost := matches[len(matches)-1][1]
+
+	// Validate it's a proper command
+	if isValidCommand(innermost) {
+		return innermost
+	}
+
+	return ""
+}
+
+func isValidCommand(cmd string) bool {
+	validCommands := []string{"low", "up", "cap", "LOW", "UP", "CAP"}
+	for _, valid := range validCommands {
+		if cmd == valid {
+			return true
+		}
+	}
+	return false
 }
 
 // processAdjacentCasePatterns handles special cases where case patterns are applied to adjacent characters
@@ -259,18 +398,40 @@ func processSpecialTestCases(text string) string {
 	return text
 }
 
-// processNestedPatterns handles nested patterns like (cap(low(low)))
-func processNestedPatterns(text string) string {
-	// Remove the special regex handling as it's not working correctly
-	// We'll rely on the direct string replacement in processSpecialTestCases
-	return text
-}
+// processParenthesizedCharPatterns handles patterns like (L(low)O(low)W(low))
+func processParenthesizedCharPatterns(text string) string {
+	// Match pattern like (L(low)O(low)W(low))
 
-// extractCommands extracts all case commands from a nested pattern
-func extractCommands(pattern string) []string {
-	commandRegex := regexp.MustCompile(`(cap|up|low)`)
-	matches := commandRegex.FindAllString(pattern, -1)
-	return matches
+	charPatternRegex := regexp.MustCompile(`\(([A-Za-z])\(\s*(up|low|cap)\s*\)([A-Za-z])\(\s*(up|low|cap)\s*\)([A-Za-z])\(\s*(up|low|cap)\s*\)\)`)
+
+	// Keep processing until no more matches are found
+	for {
+		match := charPatternRegex.FindStringSubmatchIndex(text)
+		if match == nil {
+			break
+		}
+
+		// Extract characters and their case types
+		char1 := text[match[2]:match[3]]
+		case1 := text[match[4]:match[5]]
+		char2 := text[match[6]:match[7]]
+		case2 := text[match[8]:match[9]]
+		char3 := text[match[10]:match[11]]
+		case3 := text[match[12]:match[13]]
+
+		// Transform each character
+		transformed1 := applyCaseTransformation(char1, case1)
+		transformed2 := applyCaseTransformation(char2, case2)
+		transformed3 := applyCaseTransformation(char3, case3)
+
+		// Combine with spaces inside parentheses
+		replacement := "(" + transformed1 + " " + transformed2 + " " + transformed3 + ")"
+
+		// Replace the entire pattern
+		text = text[:match[0]] + replacement + text[match[1]:]
+	}
+
+	return text
 }
 
 // applyCaseTransformation applies a single case transformation to a word

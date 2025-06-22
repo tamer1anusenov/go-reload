@@ -265,23 +265,17 @@ func findWordBefore(text string, patternPos int) (word string, start, end int, q
 		}
 	}
 
-	// Normal word finding (no quotes)
-	// First check if we're immediately after punctuation
+	// FIXED: Skip punctuation when looking for words
+	// If we're immediately after punctuation, skip it to find the actual word
 	if end > 0 && isPunctuation(text[end-1]) {
-		// Include the punctuation as part of the "word" for conversion patterns
-		end--
-		start = end
-		// Continue finding the actual word before punctuation
-		for start > 0 && isWordChar(text[start-1]) {
-			start--
+		// Skip the punctuation to find the word before it
+		for end > 0 && isPunctuation(text[end-1]) {
+			end--
 		}
-		// If we found a word + punctuation, return it
-		if start < end {
-			return text[start : end+1], start, end + 1, false, 0
+		// Skip any spaces after punctuation
+		for end > 0 && text[end-1] == ' ' {
+			end--
 		}
-		// If just punctuation, reset and try normal word finding
-		start = end + 1
-		end = start
 	}
 
 	// Standard word finding
@@ -365,4 +359,11 @@ func reconstructTextWithTransformedWords(text string, positions [][]int, transfo
 	result += text[patternPos+patternLen:]
 
 	return result
+}
+func bytesToRunes(b []byte) []rune {
+	r := make([]rune, len(b))
+	for i, v := range b {
+		r[i] = rune(v)
+	}
+	return r
 }
