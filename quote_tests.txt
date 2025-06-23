@@ -1,0 +1,25 @@
+1. QUOTES AFTER LETTERS (SHOULD ADD SPACE)
+hi'hi' test
+hi'test' example
+hello'world' case
+
+2. CONTRACTIONS (SHOULD NOT ADD SPACE)
+don't add space
+can't add space
+isn't this working
+he'll be there
+they're coming
+
+3. UNBALANCED QUOTES (SHOULD ADD CLOSING QUOTE)
+'This quote is missing its closing quote
+This has 'multiple unbalanced quotes in 'one line
+
+4. MIXED SCENARIOS
+hi'hi' and don't and can't
+This'word' and don't mix
+he'whispered:'I will be there
+
+5. QUOTES WITH SPACES
+hi  'hi    '   hi 
+hi' hi '         hi
+'   spaced    ' 

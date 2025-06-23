@@ -66,3 +66,7 @@ $ go run . sample.txt result.txt
 
 $ cat result.txt
 It was the best of times, it was the worst of TIMES, it was the age of wisdom...
+
+##to run this 
+
+go run . <input.txt> <output.txt>
