@@ -40,10 +40,10 @@ now
 now
 
 NESTED TRANSFORMATIONS
-WOW 
+Wow 
 WOW
 
-Wait 
+wait 
 Wait
 
 DATA CONVERSIONS
@@ -123,3 +123,18 @@ double "quote" test
 
 Longword 
 Longword
+
+173364522
+173364522
+
+43793
+43793
+
+
+
+SS 
+
+sss 
+ss 
+
+sSSS 

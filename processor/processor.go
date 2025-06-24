@@ -10,22 +10,30 @@ func ProcessText(text string) string {
 
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
-		lines[i] = strings.TrimLeft(line, " ")
+		line = strings.TrimLeft(line, " ")
+		lines[i] = line
 	}
 	text = strings.Join(lines, "\n")
 
-	text = processParenthesizedCharPatterns(text)
-
+	// First handle nested patterns like (cap(low)) and BIN(low)
 	text = processNestedPatterns(text)
 
+	// Then handle parenthesized character patterns like (L(low)O(low)W(low))
+	text = processParenthesizedCharPatterns(text)
+
+	// Handle adjacent character patterns like L(low)o(up)w(up)
 	text = processAdjacentCharPatterns(text)
 
+	// Handle patterns directly attached to words (no space)
 	text = processNoSpacePatterns(text)
 
+	// Handle special cases of adjacent patterns
 	text = processAdjacentCasePatterns(text)
 
+	// Process remaining patterns sequentially from LEFT TO RIGHT
 	text = processAllPatterns(text)
 
+	// Apply final formatting
 	text = formatPunctuation(text)
 
 	text = fixArticles(text)
@@ -33,7 +41,8 @@ func ProcessText(text string) string {
 	text = normalizeSpaces(text)
 	lines = strings.Split(text, "\n")
 	for i, line := range lines {
-		lines[i] = strings.TrimLeft(line, " ")
+		line = strings.TrimLeft(line, " ")
+		lines[i] = line
 	}
 	text = strings.Join(lines, "\n")
 
@@ -210,6 +219,43 @@ func processNoSpacePatterns(text string) string {
 }
 
 func processNestedPatterns(text string) string {
+	// First handle patterns like WORD(command) where WORD itself is a command
+	commandWordRegex := regexp.MustCompile(`([hH][eE][xX]|[bB][iI][nN]|[uU][pP]|[lL][oO][wW]|[cC][aA][pP])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)`)
+
+	// Process all command word patterns
+	for {
+		match := commandWordRegex.FindStringSubmatchIndex(text)
+		if match == nil {
+			break
+		}
+
+		// Extract the command word and the inner command
+		commandWord := text[match[2]:match[3]]
+		innerCommand := text[match[4]:match[5]]
+
+		// Normalize both to lowercase
+		commandWordLower := strings.ToLower(commandWord)
+		innerCommandLower := strings.ToLower(innerCommand)
+
+		// Apply the inner command to the command word
+		var transformedWord string
+		switch innerCommandLower {
+		case "up":
+			transformedWord = strings.ToUpper(commandWordLower)
+		case "low":
+			transformedWord = strings.ToLower(commandWordLower)
+		case "cap":
+			transformedWord = capitalize(commandWordLower)
+		default:
+			transformedWord = commandWordLower
+		}
+
+		// Replace the pattern with the transformed command word
+		replacement := transformedWord
+		text = text[:match[0]] + replacement + text[match[1]:]
+	}
+
+	// Then handle general nested patterns
 	nestedPattern := regexp.MustCompile(`\([A-Za-z]+\([A-Za-z]+(?:\([A-Za-z]+(?:\([A-Za-z]+(?:\([A-Za-z]+\)[A-Za-z]*)*\)[A-Za-z]*)*\)[A-Za-z]*)*\)[A-Za-z]*\)`)
 
 	for {
@@ -218,12 +264,15 @@ func processNestedPatterns(text string) string {
 			break
 		}
 
+		// Extract the innermost command
 		innermost := extractInnermostCommand(match)
 		if innermost == "" {
+			// If we can't extract a valid command, remove the pattern
 			text = strings.Replace(text, match, "", 1)
 			continue
 		}
 
+		// Replace the entire nested pattern with just the innermost command
 		replacement := "(" + innermost + ")"
 		text = strings.Replace(text, match, replacement, 1)
 	}

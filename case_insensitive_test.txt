@@ -123,3 +123,18 @@ double "quote" test
 
 longword (cap, 1)
 Longword
+
+01010010101010101010100101010 (BIN(low))
+01010010101010101010100101010 (bin)
+
+AB11 (HEX(low))
+AB11 (hex)
+
+
+(low)
+ss (UP)
+
+SSS (LOW(low))
+ss (up,0)
+
+sSSS (low,-3)
