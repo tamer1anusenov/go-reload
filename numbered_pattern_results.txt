@@ -1,0 +1,16 @@
+Testing numbered patterns:
+
+test Should Convert To Test 
+
+This should also work with multiple Words Like So 
+
+Hello world this IS A TEST 
+
+The quick brown fox jumps over 
+
+Lorem ipsum Dolor Sit Amet, Consectetur Adipiscing 
+
+Check if it works with other lines before:
+Previous line
+Previous line 2
+this Text Should Be Capitalized  

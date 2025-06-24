@@ -1,0 +1,125 @@
+ARTICLE CORRECTIONS
+a orange
+an orange
+
+an dog
+a dog
+
+A elephant
+An elephant
+
+A hourglass
+An hourglass
+
+a a apple
+a an apple
+
+CASE TRANSFORMATIONS
+this is (cap)
+this is This
+
+this is (up)
+this is THIS
+
+this is (low)
+this is this
+
+hello (cap, 2)
+Hello World
+
+HELLO (low, 2)
+hello
+
+now (up, 3)
+NOW
+
+now (up, 0)
+now
+
+now (up, -1)
+now
+
+NESTED TRANSFORMATIONS
+wow (cap(up))
+WOW
+
+wait (low(up(cap)))
+Wait
+
+DATA CONVERSIONS
+2A (hex)
+42
+
+101010 (bin)
+42
+
+invalid (hex)
+invalid
+
+invalid (bin)
+invalid
+
+EXTRA SPACES AND SYMBOLS
+Hello       world     .
+Hello world.
+
+I saw it .  .   .
+I saw it...
+
+Too  many ,,, punctuations  !!!
+Too many, punctuations!
+
+QUOTES
+he said: '   hello    '
+he said: 'hello'
+
+she whispered: "   I’ll be there "
+she whispered: "I’ll be there"
+
+COMBINED TRANSFORMATIONS
+It was a ' amazing ' (cap)
+It was an 'Amazing'
+
+I am (cap, 2) happy (up)
+I Am HAPPY
+
+one two (cap, 2) three (low)
+One Two three
+
+INVALID PATTERNS
+word (up,abc)
+word
+
+word (cap,9999999999999999999)
+Word
+
+word (hex)(bin)
+word
+
+MISC EDGE CASES
+(abcd)
+(abcd)
+
+(a(hex))
+10
+
+a(hex)(bin)
+2
+
+ab(hex)
+171
+
+AB(hex)(low)
+171
+
+FHFGFHG (low)
+fhfgfhg
+
+single'quote'test
+single 'quote' test
+
+double"quote"test
+double "quote" test
+
+longword (cap, 1)
+Longword

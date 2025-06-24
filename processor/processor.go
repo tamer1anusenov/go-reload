@@ -78,11 +78,15 @@ type PatternMatch struct {
 func findAllPatterns(text string) []PatternMatch {
 	var patterns []PatternMatch
 
-	simplePatternRegex := regexp.MustCompile(`\(\s*(hex|bin|up|low|cap)\s*\)`)
+	simplePatternRegex := regexp.MustCompile(`\(\s*([hH][eE][xX]|[bB][iI][nN]|[uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)`)
 	simpleMatches := simplePatternRegex.FindAllStringIndex(text, -1)
 	for _, match := range simpleMatches {
 		patternText := text[match[0]:match[1]]
-		command := regexp.MustCompile(`(hex|bin|up|low|cap)`).FindString(patternText)
+		commandRaw := regexp.MustCompile(`([hH][eE][xX]|[bB][iI][nN]|[uU][pP]|[lL][oO][wW]|[cC][aA][pP])`).FindString(patternText)
+
+		// Normalize command to lowercase
+		command := strings.ToLower(commandRaw)
+
 		patterns = append(patterns, PatternMatch{
 			text:     patternText,
 			position: match[0],
@@ -90,12 +94,15 @@ func findAllPatterns(text string) []PatternMatch {
 		})
 	}
 
-	numberedRegex := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(-?\d+)\s*\)`)
+	numberedRegex := regexp.MustCompile(`\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*,\s*(-?\d+)\s*\)`)
 	matches := numberedRegex.FindAllStringIndex(text, -1)
 	for _, match := range matches {
 		patternText := text[match[0]:match[1]]
-		cmdMatches := regexp.MustCompile(`(up|low|cap)`).FindString(patternText)
+		cmdMatchesRaw := regexp.MustCompile(`([uU][pP]|[lL][oO][wW]|[cC][aA][pP])`).FindString(patternText)
 		countMatches := regexp.MustCompile(`-?\d+`).FindString(patternText)
+
+		// Normalize command to lowercase
+		cmdMatches := strings.ToLower(cmdMatchesRaw)
 
 		if strings.HasPrefix(countMatches, "-") {
 			patterns = append(patterns, PatternMatch{
@@ -120,18 +127,20 @@ func findAllPatterns(text string) []PatternMatch {
 func applyAndRemovePattern(text, pattern string, position int) string {
 	var result string
 
+	patternLower := strings.ToLower(pattern)
+
 	switch {
-	case pattern == "(hex)" || strings.Contains(pattern, "hex"):
+	case strings.Contains(patternLower, "hex"):
 		result = processHexAtPosition(text, position)
-	case pattern == "(bin)" || strings.Contains(pattern, "bin"):
+	case strings.Contains(patternLower, "bin"):
 		result = processBinAtPosition(text, position)
-	case pattern == "(up)" || (strings.Contains(pattern, "up") && !strings.Contains(pattern, ",")):
+	case strings.Contains(patternLower, "up") && !strings.Contains(patternLower, ","):
 		result = processCaseAtPosition(text, position, "up", 1)
-	case pattern == "(low)" || (strings.Contains(pattern, "low") && !strings.Contains(pattern, ",")):
+	case strings.Contains(patternLower, "low") && !strings.Contains(patternLower, ","):
 		result = processCaseAtPosition(text, position, "low", 1)
-	case pattern == "(cap)" || (strings.Contains(pattern, "cap") && !strings.Contains(pattern, ",")):
+	case strings.Contains(patternLower, "cap") && !strings.Contains(patternLower, ","):
 		result = processCaseAtPosition(text, position, "cap", 1)
-	case strings.Contains(pattern, ","):
+	case strings.Contains(patternLower, ","):
 		result = processNumberedCasePattern(text, pattern, position)
 	default:
 		result = removePatternAt(text, pattern, position)
@@ -143,7 +152,7 @@ func applyAndRemovePattern(text, pattern string, position int) string {
 }
 
 func processNoSpacePatterns(text string) string {
-	noSpaceRegex := regexp.MustCompile(`(\w+)\(\s*(up|low|cap)\s*\)`)
+	noSpaceRegex := regexp.MustCompile(`(\w+)\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)`)
 
 	type transformation struct {
 		start int
@@ -162,8 +171,10 @@ func processNoSpacePatterns(text string) string {
 		caseTypeStart, caseTypeEnd := match[4], match[5]
 
 		word := text[wordStart:wordEnd]
+		caseTypeRaw := text[caseTypeStart:caseTypeEnd]
 
-		caseType := text[caseTypeStart:caseTypeEnd]
+		// Normalize command to lowercase
+		caseType := strings.ToLower(caseTypeRaw)
 
 		var transformedWord string
 		switch caseType {
@@ -230,15 +241,18 @@ func extractInnermostCommand(pattern string) string {
 
 	innermost := matches[len(matches)-1][1]
 
+	// Normalize command to lowercase for validation
 	if isValidCommand(innermost) {
-		return innermost
+		// Return the normalized lowercase version
+		return strings.ToLower(innermost)
 	}
 
 	return ""
 }
 
 func isValidCommand(cmd string) bool {
-	validCommands := []string{"low", "up", "cap", "LOW", "UP", "CAP"}
+	cmd = strings.ToLower(cmd)
+	validCommands := []string{"low", "up", "cap"}
 	for _, valid := range validCommands {
 		if cmd == valid {
 			return true
@@ -248,7 +262,7 @@ func isValidCommand(cmd string) bool {
 }
 
 func processAdjacentCasePatterns(text string) string {
-	adjacentRegex := regexp.MustCompile(`([a-zA-Z])\(\s*(up|low|cap)\s*\)`)
+	adjacentRegex := regexp.MustCompile(`([a-zA-Z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)`)
 
 	for {
 		matches := adjacentRegex.FindAllStringSubmatchIndex(text, -1)
@@ -269,7 +283,10 @@ func processAdjacentCasePatterns(text string) string {
 		caseTypeStart, caseTypeEnd := match[4], match[5]
 
 		char := text[charStart:charEnd]
-		caseType := text[caseTypeStart:caseTypeEnd]
+		caseTypeRaw := text[caseTypeStart:caseTypeEnd]
+
+		// Normalize command to lowercase
+		caseType := strings.ToLower(caseTypeRaw)
 
 		var transformedChar string
 		switch caseType {
@@ -291,8 +308,7 @@ func processAdjacentCasePatterns(text string) string {
 }
 
 func processParenthesizedCharPatterns(text string) string {
-
-	charPatternRegex := regexp.MustCompile(`\(([A-Za-z])\(\s*(up|low|cap)\s*\)([A-Za-z])\(\s*(up|low|cap)\s*\)([A-Za-z])\(\s*(up|low|cap)\s*\)\)`)
+	charPatternRegex := regexp.MustCompile(`\(([A-Za-z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)([A-Za-z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)([A-Za-z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)\)`)
 
 	for {
 		match := charPatternRegex.FindStringSubmatchIndex(text)
@@ -301,11 +317,16 @@ func processParenthesizedCharPatterns(text string) string {
 		}
 
 		char1 := text[match[2]:match[3]]
-		case1 := text[match[4]:match[5]]
+		caseRaw1 := text[match[4]:match[5]]
 		char2 := text[match[6]:match[7]]
-		case2 := text[match[8]:match[9]]
+		caseRaw2 := text[match[8]:match[9]]
 		char3 := text[match[10]:match[11]]
-		case3 := text[match[12]:match[13]]
+		caseRaw3 := text[match[12]:match[13]]
+
+		// Normalize commands to lowercase
+		case1 := strings.ToLower(caseRaw1)
+		case2 := strings.ToLower(caseRaw2)
+		case3 := strings.ToLower(caseRaw3)
 
 		transformed1 := applyCaseTransformation(char1, case1)
 		transformed2 := applyCaseTransformation(char2, case2)
@@ -333,7 +354,7 @@ func applyCaseTransformation(word, caseType string) string {
 }
 
 func processAdjacentCharPatterns(text string) string {
-	charPatternRegex := regexp.MustCompile(`([a-zA-Z])\(\s*(up|low|cap)\s*\)([a-zA-Z])\(\s*(up|low|cap)\s*\)([a-zA-Z])\(\s*(up|low|cap)\s*\)`)
+	charPatternRegex := regexp.MustCompile(`([a-zA-Z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)([a-zA-Z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)([a-zA-Z])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)`)
 
 	for {
 		match := charPatternRegex.FindStringSubmatchIndex(text)
@@ -342,11 +363,16 @@ func processAdjacentCharPatterns(text string) string {
 		}
 
 		char1 := text[match[2]:match[3]]
-		case1 := text[match[4]:match[5]]
+		caseRaw1 := text[match[4]:match[5]]
 		char2 := text[match[6]:match[7]]
-		case2 := text[match[8]:match[9]]
+		caseRaw2 := text[match[8]:match[9]]
 		char3 := text[match[10]:match[11]]
-		case3 := text[match[12]:match[13]]
+		caseRaw3 := text[match[12]:match[13]]
+
+		// Normalize commands to lowercase
+		case1 := strings.ToLower(caseRaw1)
+		case2 := strings.ToLower(caseRaw2)
+		case3 := strings.ToLower(caseRaw3)
 
 		transformed1 := applyCaseTransformation(char1, case1)
 		transformed2 := applyCaseTransformation(char2, case2)

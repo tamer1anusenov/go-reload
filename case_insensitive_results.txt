@@ -1,0 +1,29 @@
+1. SIMPLE CASE TRANSFORMATIONS WITH DIFFERENT CAPITALIZATIONS
+Word should be capitalized
+Word should also be capitalized
+Word should also be capitalized
+Word should also be capitalized
+
+2. UPPERCASE TRANSFORMATIONS WITH DIFFERENT CAPITALIZATIONS
+WORD should be uppercase
+WORD should also be uppercase
+WORD should also be uppercase
+WORD should also be uppercase
+
+3. LOWERCASE TRANSFORMATIONS WITH DIFFERENT CAPITALIZATIONS
+word should be lowercase
+word should also be lowercase
+word should also be lowercase
+word should also be lowercase
+
+4. NUMBERED TRANSFORMATIONS WITH DIFFERENT CAPITALIZATIONS
+One Two Three should capitalize all three words
+One Two Three should also capitalize all three words
+One Two Three should also capitalize all three words
+One Two Three should also capitalize all three words
+
+5. WHITESPACE VARIATIONS IN PATTERNS
+One Two Three should work with no space
+One Two Three should work with extra spaces
+One Two Three should work with extra spaces
+One Two Three should work with no space 

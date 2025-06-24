@@ -1,0 +1,125 @@
+ARTICLE CORRECTIONS
+an orange
+an orange
+
+a dog
+a dog
+
+An elephant
+An elephant
+
+An hourglass
+An hourglass
+
+a an apple
+a an apple
+
+CASE TRANSFORMATIONS
+this Is 
+this is This
+
+this IS 
+this is THIS
+
+this is 
+this is this
+
+Hello 
+Hello World
+
+hello 
+hello
+
+NOW 
+NOW
+
+now 
+now
+
+now 
+now
+
+NESTED TRANSFORMATIONS
+WOW 
+WOW
+
+Wait 
+Wait
+
+DATA CONVERSIONS
+42
+42
+
+42
+42
+
+invalid 
+invalid
+
+invalid 
+invalid
+
+EXTRA SPACES AND SYMBOLS
+Hello world.
+Hello world.
+
+I saw it...
+I saw it...
+
+Too many,,, punctuations!!!
+Too many, punctuations!
+
+QUOTES
+he said:'hello'
+he said:'hello'
+
+she whispered:"I’ll be there"
+she whispered:"I’ll be there"
+
+COMBINED TRANSFORMATIONS
+It was a 'Amazing' 
+It was an 'Amazing'
+
+I Am HAPPY 
+I Am HAPPY
+
+One Two three 
+One Two three
+
+INVALID PATTERNS
+word (up, abc)
+word
+
+Word 
+Word
+
+word 
+word
+
+MISC EDGE CASES
+(abcd)
+(abcd)
+
+
+10
+
+2
+2
+
+171
+171
+
+171
+171
+
+fhfgfhg 
+fhfgfhg
+
+single 'quote' test
+single 'quote' test
+
+double "quote" test
+double "quote" test
+
+Longword 
+Longword

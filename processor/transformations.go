@@ -154,11 +154,14 @@ func processCaseAtPosition(text string, pos int, caseType string, count int) str
 }
 
 func processNumberedCasePattern(text, pattern string, position int) string {
-	re := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(-?\d+)\s*\)`)
+	re := regexp.MustCompile(`\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*,\s*(-?\d+)\s*\)`)
 	matches := re.FindStringSubmatch(pattern)
 	if len(matches) == 3 {
-		caseType := matches[1]
+		caseTypeRaw := matches[1]
 		count, _ := strconv.Atoi(matches[2])
+
+		// Normalize command to lowercase
+		caseType := strings.ToLower(caseTypeRaw)
 
 		if count <= 0 {
 			return removePatternAt(text, pattern, position)
