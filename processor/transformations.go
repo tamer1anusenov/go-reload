@@ -102,6 +102,26 @@ func processBinAtPosition(text string, pos int) string {
 
 func processCaseAtPosition(text string, pos int, caseType string, count int) string {
 	words, positions, quotedFlags, quoteChars := findWordsBefore(text, pos, count)
+
+	// NEW LOGIC FOR PROBLEM 1: Apply to last non-numeric word if target is numeric and count is 1 for case transformation
+	// Only apply this logic for single word case transformations (count == 1)
+	if count == 1 && (caseType == "up" || caseType == "low" || caseType == "cap") && len(words) > 0 && isNumeric(words[0]) {
+		// Try to find a non-numeric word on the line before the current numeric word's position
+		targetWord, targetStart, targetEnd, targetQuoted, targetQuoteChar := findLastNonNumericWordOnLineBefore(text, positions[0][0])
+
+		if targetWord != "" {
+			// Update the first word in the 'words', 'positions', etc. slices to reflect the new target word
+			words[0] = targetWord
+			positions[0][0] = targetStart
+			positions[0][1] = targetEnd
+			quotedFlags[0] = targetQuoted
+			quoteChars[0] = targetQuoteChar
+		} else {
+			// If no non-numeric word found to apply transformation, just remove the pattern
+			return removePatternAt(text, fmt.Sprintf("(%s)", caseType), pos)
+		}
+	}
+
 	if len(words) > 0 {
 		transformedWords := make([]string, len(words))
 		for i, word := range words {
@@ -154,14 +174,11 @@ func processCaseAtPosition(text string, pos int, caseType string, count int) str
 }
 
 func processNumberedCasePattern(text, pattern string, position int) string {
-	re := regexp.MustCompile(`\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*,\s*(-?\d+)\s*\)`)
+	re := regexp.MustCompile(`\(\s*(up|low|cap)\s*,\s*(-?\d+)\s*\)`)
 	matches := re.FindStringSubmatch(pattern)
 	if len(matches) == 3 {
-		caseTypeRaw := matches[1]
+		caseType := matches[1]
 		count, _ := strconv.Atoi(matches[2])
-
-		// Normalize command to lowercase
-		caseType := strings.ToLower(caseTypeRaw)
 
 		if count <= 0 {
 			return removePatternAt(text, pattern, position)
@@ -243,8 +260,50 @@ func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, []
 	return words, positions, quotedFlags, quoteChars
 }
 
+func normalizeNestedCommandParentheses(text string) string {
+	// Этот регулярное выражение ищет паттерны типа (КОМАНДА (ВЛОЖЕННЫЙ_ПАТТЕРН))
+	// Оно захватывает КОМАНДУ и ВЛОЖЕННЫЙ_ПАТТЕРН, удаляя пробелы между ними.
+	// Будет применяться итеративно для обработки нескольких уровней вложенности с пробелами.
+	re := regexp.MustCompile(`\(([a-zA-Z]+)\s*(\(.*?\))\)`)
+
+	for {
+		foundChange := false
+		newText := re.ReplaceAllStringFunc(text, func(fullMatch string) string {
+			// Перепарсим fullMatch, чтобы получить захваченные группы
+			innerRe := regexp.MustCompile(`\(([a-zA-Z]+)\s*(\(.*?\))\)`) // Same regex as outer
+			subMatches := innerRe.FindStringSubmatch(fullMatch)
+
+			if len(subMatches) < 3 {
+				return fullMatch // Этого не должно произойти, если re совпадает
+			}
+
+			// subMatches[1] - внешняя команда (e.g., "low")
+			// subMatches[2] - внутренняя часть (e.g., "(cap                  (up))")
+
+			// Перестраиваем без пробелов между командой и внутренними скобками
+			// И убеждаемся, что внешняя команда в нижнем регистре
+			result := "(" + strings.ToLower(subMatches[1]) + subMatches[2] + ")"
+
+			if result != fullMatch {
+				foundChange = true
+			}
+			return result
+		})
+
+		if !foundChange {
+			break // Нет больше изменений для этого паттерна, останавливаем цикл
+		}
+		text = newText
+	}
+	return text
+}
+
+// Изменим normalizeSpaces для вызова новой функции
 func normalizeSpaces(text string) string {
 	text = formatQuotes(text)
+	// Сначала нормализуем вложенные командные скобки для строгого форматирования
+	text = normalizeNestedCommandParentheses(text)
+	// Затем применяем существующее общее форматирование скобок (которое обрабатывает (  слово  ) -> (слово))
 	text = formatParentheses(text)
 
 	lines := strings.Split(text, "\n")

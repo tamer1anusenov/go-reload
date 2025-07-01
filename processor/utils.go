@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -173,4 +174,41 @@ func getQuoteChar(word string) byte {
 	}
 
 	return 0
+}
+
+func isNumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func findLastNonNumericWordOnLineBefore(text string, searchEndPos int) (word string, start, end int, quoted bool, quoteChar byte) {
+	lineStart := strings.LastIndex(text[:searchEndPos], "\n")
+	if lineStart == -1 {
+		lineStart = 0
+	} else {
+		lineStart++
+	}
+
+	lineText := text[lineStart:searchEndPos]
+
+	wordRegex := regexp.MustCompile(`\b[a-zA-Z0-9_]+\b`)
+	matches := wordRegex.FindAllStringSubmatch(lineText, -1)
+	matchIndices := wordRegex.FindAllStringIndex(lineText, -1)
+
+	for i := len(matches) - 1; i >= 0; i-- {
+		word := matches[i][0]
+		if !isNumeric(word) { // Found the last non-numeric word
+			absoluteStart := lineStart + matchIndices[i][0]
+			absoluteEnd := lineStart + matchIndices[i][1]
+			return word, absoluteStart, absoluteEnd, isQuoted(word), getQuoteChar(word)
+		}
+	}
+	return "", -1, -1, false, 0 // No non-numeric word found
 }

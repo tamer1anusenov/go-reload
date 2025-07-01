@@ -219,62 +219,82 @@ func processNoSpacePatterns(text string) string {
 }
 
 func processNestedPatterns(text string) string {
-	// First handle patterns like WORD(command) where WORD itself is a command
+	// Phase 1: Iteratively flatten semantic nested patterns (e.g., (cap(hex)) -> (cap))
+	// This regex matches (OUTER_CMD(INNER_CMD_PATTERN)) where INNER_CMD_PATTERN is a command in parentheses.
+	nestedTransformApplyRegex := regexp.MustCompile(`\(([a-zA-Z]+)\s*(\(hex\)|\(bin\)|\(up\)|\(low\)|\(cap\))\)`)
+
+	for {
+		foundFlattening := false
+		newText := nestedTransformApplyRegex.ReplaceAllStringFunc(text, func(fullMatch string) string {
+			subMatches := nestedTransformApplyRegex.FindStringSubmatch(fullMatch)
+			if len(subMatches) < 3 {
+				return fullMatch // Should not happen if regex matched
+			}
+
+			outerCmdRaw := subMatches[1]  // e.g., "cap", "hex"
+			innerPattern := subMatches[2] // e.g., "(hex)", "(up)"
+
+			outerCmd := strings.ToLower(outerCmdRaw)
+			innerCmd := strings.ToLower(strings.Trim(innerPattern, "()")) // Extract inner command (e.g., "hex" from "(hex)")
+
+			var resultCmd string
+
+			// Apply innerCmd to outerCmd if innerCmd is a case transformation
+			if innerCmd == "up" || innerCmd == "low" || innerCmd == "cap" {
+				resultCmd = applyCaseTransformation(outerCmd, innerCmd)
+			} else if outerCmd == "hex" || outerCmd == "bin" {
+				// If outer is hex/bin and inner is also hex/bin, or not a case transformation
+				// E.g., (hex(bin)), (hex(up)) -> should result in (hex) as 'up' doesn't transform 'hex' numerically
+				resultCmd = outerCmd
+			} else {
+				// Default for unhandled combinations, just pass through outer command
+				resultCmd = outerCmd
+			}
+
+			// If the outer command was transformed, mark as found change
+			if strings.ToLower(resultCmd) != strings.ToLower(outerCmd) {
+				foundFlattening = true
+			}
+
+			return "(" + resultCmd + ")"
+		})
+
+		if !foundFlattening {
+			break // No more nested command transformations applied in this pass
+		}
+		text = newText
+	}
+
+	// Phase 2: Handle patterns directly attached to words (no space) after flattening
+	// This section is for patterns like WORD(COMMAND) e.g., BIN(low)
 	commandWordRegex := regexp.MustCompile(`([hH][eE][xX]|[bB][iI][nN]|[uU][pP]|[lL][oO][wW]|[cC][aA][pP])\(\s*([uU][pP]|[lL][oO][wW]|[cC][aA][pP])\s*\)`)
 
-	// Process all command word patterns
 	for {
 		match := commandWordRegex.FindStringSubmatchIndex(text)
 		if match == nil {
 			break
 		}
+		word := text[match[2]:match[3]]        // This is the 'WORD' part of WORD(COMMAND)
+		caseTypeRaw := text[match[4]:match[5]] // This is the 'COMMAND' part
 
-		// Extract the command word and the inner command
-		commandWord := text[match[2]:match[3]]
-		innerCommand := text[match[4]:match[5]]
+		caseType := strings.ToLower(caseTypeRaw)
+		wordLower := strings.ToLower(word)
 
-		// Normalize both to lowercase
-		commandWordLower := strings.ToLower(commandWord)
-		innerCommandLower := strings.ToLower(innerCommand)
-
-		// Apply the inner command to the command word
 		var transformedWord string
-		switch innerCommandLower {
+		switch caseType {
 		case "up":
-			transformedWord = strings.ToUpper(commandWordLower)
+			transformedWord = strings.ToUpper(wordLower)
 		case "low":
-			transformedWord = strings.ToLower(commandWordLower)
+			transformedWord = strings.ToLower(wordLower)
 		case "cap":
-			transformedWord = capitalize(commandWordLower)
+			transformedWord = capitalize(wordLower)
 		default:
-			transformedWord = commandWordLower
+			transformedWord = wordLower
 		}
 
-		// Replace the pattern with the transformed command word
+		// Replace WORD(COMMAND) with TRANSFORMED_WORD
 		replacement := transformedWord
 		text = text[:match[0]] + replacement + text[match[1]:]
-	}
-
-	// Then handle general nested patterns
-	nestedPattern := regexp.MustCompile(`\([A-Za-z]+\([A-Za-z]+(?:\([A-Za-z]+(?:\([A-Za-z]+(?:\([A-Za-z]+\)[A-Za-z]*)*\)[A-Za-z]*)*\)[A-Za-z]*)*\)[A-Za-z]*\)`)
-
-	for {
-		match := nestedPattern.FindString(text)
-		if match == "" {
-			break
-		}
-
-		// Extract the innermost command
-		innermost := extractInnermostCommand(match)
-		if innermost == "" {
-			// If we can't extract a valid command, remove the pattern
-			text = strings.Replace(text, match, "", 1)
-			continue
-		}
-
-		// Replace the entire nested pattern with just the innermost command
-		replacement := "(" + innermost + ")"
-		text = strings.Replace(text, match, replacement, 1)
 	}
 
 	return text
@@ -288,11 +308,11 @@ func extractInnermostCommand(pattern string) string {
 		return ""
 	}
 
+	// Reverting to original: take the last match, which is the innermost for simple (cmd) patterns
 	innermost := matches[len(matches)-1][1]
 
 	// Normalize command to lowercase for validation
 	if isValidCommand(innermost) {
-		// Return the normalized lowercase version
 		return strings.ToLower(innermost)
 	}
 
