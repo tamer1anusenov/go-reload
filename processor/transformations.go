@@ -261,53 +261,31 @@ func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, []
 }
 
 func normalizeNestedCommandParentheses(text string) string {
-	// Этот регулярное выражение ищет паттерны типа (КОМАНДА (ВЛОЖЕННЫЙ_ПАТТЕРН))
-	// Оно захватывает КОМАНДУ и ВЛОЖЕННЫЙ_ПАТТЕРН, удаляя пробелы между ними.
-	// Будет применяться итеративно для обработки нескольких уровней вложенности с пробелами.
-	re := regexp.MustCompile(`\(([a-zA-Z]+)\s*(\(.*?\))\)`)
+	// Regex to find a word character (a command) followed by one or more spaces
+	// and then an opening parenthesis.
+	re := regexp.MustCompile(`(\w+)\s+\(`)
 
+	// Loop until no more changes can be made. This ensures that we process
+	// all levels of nesting, from the inside out.
 	for {
-		foundChange := false
-		newText := re.ReplaceAllStringFunc(text, func(fullMatch string) string {
-			// Перепарсим fullMatch, чтобы получить захваченные группы
-			innerRe := regexp.MustCompile(`\(([a-zA-Z]+)\s*(\(.*?\))\)`) // Same regex as outer
-			subMatches := innerRe.FindStringSubmatch(fullMatch)
-
-			if len(subMatches) < 3 {
-				return fullMatch // Этого не должно произойти, если re совпадает
-			}
-
-			// subMatches[1] - внешняя команда (e.g., "low")
-			// subMatches[2] - внутренняя часть (e.g., "(cap                  (up))")
-
-			// Перестраиваем без пробелов между командой и внутренними скобками
-			// И убеждаемся, что внешняя команда в нижнем регистре
-			result := "(" + strings.ToLower(subMatches[1]) + subMatches[2] + ")"
-
-			if result != fullMatch {
-				foundChange = true
-			}
-			return result
-		})
-
-		if !foundChange {
-			break // Нет больше изменений для этого паттерна, останавливаем цикл
+		originalText := text
+		text = re.ReplaceAllString(text, "$1(")
+		// If the string is stable (no changes in this iteration), we are done.
+		if text == originalText {
+			break
 		}
-		text = newText
 	}
 	return text
 }
 
-// Изменим normalizeSpaces для вызова новой функции
 func normalizeSpaces(text string) string {
 	text = formatQuotes(text)
-	// Сначала нормализуем вложенные командные скобки для строгого форматирования
 	text = normalizeNestedCommandParentheses(text)
-	// Затем применяем существующее общее форматирование скобок (которое обрабатывает (  слово  ) -> (слово))
 	text = formatParentheses(text)
 
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
+		// This regex cleans up extra spaces between regular words.
 		wordSpaceRegex := regexp.MustCompile(`(\w+)\s{2,}(\w+)`)
 		for {
 			newLine := wordSpaceRegex.ReplaceAllString(line, "$1 $2")
