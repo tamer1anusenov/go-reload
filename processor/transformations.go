@@ -261,9 +261,10 @@ func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, []
 }
 
 func normalizeNestedCommandParentheses(text string) string {
-	// Regex to find a word character (a command) followed by one or more spaces
-	// and then an opening parenthesis.
-	re := regexp.MustCompile(`(\w+)\s+\(`)
+	// Regex to find a word character (a command) followed by one or more
+	// NON-NEWLINE whitespace characters and then an opening parenthesis.
+	// [^\S\n]+ matches one or more whitespace characters that are NOT newlines.
+	re := regexp.MustCompile(`(\w+)[^\S\n]+\(`) // FIX IS HERE
 
 	// Loop until no more changes can be made. This ensures that we process
 	// all levels of nesting, from the inside out.
@@ -278,14 +279,19 @@ func normalizeNestedCommandParentheses(text string) string {
 	return text
 }
 
+// normalizeSpaces is the main function you provided, now calling the corrected helper.
 func normalizeSpaces(text string) string {
 	text = formatQuotes(text)
+	// First, normalize nested command parentheses for strict formatting.
+	// This is the function we fixed.
 	text = normalizeNestedCommandParentheses(text)
+	// Then, apply existing general parentheses formatting.
 	text = formatParentheses(text)
 
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
 		// This regex cleans up extra spaces between regular words.
+		// It runs multiple times per line to ensure all multiple spaces are reduced.
 		wordSpaceRegex := regexp.MustCompile(`(\w+)\s{2,}(\w+)`)
 		for {
 			newLine := wordSpaceRegex.ReplaceAllString(line, "$1 $2")
