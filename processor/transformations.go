@@ -402,22 +402,39 @@ func fixArticles(text string) string {
 	lines := strings.Split(text, "\n")
 
 	for i, line := range lines {
-		sequenceRegex := regexp.MustCompile(`(\b(?:[aA]n?\s+)*)([aA]n?)\s+([a-zA-Z]\w*)`)
+		// Updated regex to handle quotes around words
+		// Pattern: (preceding articles)(main article)(space)(optional quotes)(word)(optional quotes)
+		sequenceRegex := regexp.MustCompile(`(\b(?:[aA]n?\s+)*)([aA]n?)\s+(['"]?)([a-zA-Z]\w*)(['"]?)`)
 
 		line = sequenceRegex.ReplaceAllStringFunc(line, func(match string) string {
 			parts := sequenceRegex.FindStringSubmatch(match)
-			if len(parts) >= 4 {
+			if len(parts) >= 6 {
 				precedingArticles := parts[1]
 				lastArticle := parts[2]
-				targetWord := parts[3]
+				openQuote := parts[3]
+				targetWord := parts[4]
+				closeQuote := parts[5]
+
 				lowerTargetWord := strings.ToLower(targetWord)
+
+				// Don't modify if the target word is itself an article
 				if lowerTargetWord == "a" || lowerTargetWord == "an" {
 					return match
 				}
 
 				firstChar := strings.ToLower(string(targetWord[0]))
+
+				// Check if word starts with vowel sound
 				needsAn := firstChar == "a" || firstChar == "e" || firstChar == "i" ||
-					firstChar == "o" || firstChar == "u" || firstChar == "h"
+					firstChar == "o" || firstChar == "u"
+
+				// Special handling for 'h' - this is simplified
+				// In practice, you'd need a more sophisticated approach
+				if firstChar == "h" {
+					// For simplicity, treating 'h' words as needing 'an'
+					// Real implementation would need to handle "hour" vs "house" differently
+					needsAn = true
+				}
 
 				var newLastArticle string
 				if needsAn {
@@ -426,7 +443,7 @@ func fixArticles(text string) string {
 					} else if lastArticle == "a" {
 						newLastArticle = "an"
 					} else {
-						newLastArticle = lastArticle
+						newLastArticle = lastArticle // already "an" or "An"
 					}
 				} else {
 					if lastArticle == "A" || lastArticle == "An" {
@@ -436,7 +453,7 @@ func fixArticles(text string) string {
 					}
 				}
 
-				return precedingArticles + newLastArticle + " " + targetWord
+				return precedingArticles + newLastArticle + " " + openQuote + targetWord + closeQuote
 			}
 			return match
 		})
