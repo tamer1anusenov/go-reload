@@ -112,28 +112,28 @@ I am an optimist, but an optimist
 
 CASE TRANSFORMATIONS
 
-Good morning, Mr Harold Wilson
+Good morning, Mr Harold Wilson 
 Good morning, Mr Harold Wilson
 
 one Two THREE!!!!!
 one Two THREE
 
-One Two Three
+One Two Three 
 One Two Three
 
-Abc(l o w)
-Abc(l o w)
+Abc (l o w)
+Abc (l o w )
 
 HELLO World 
 HELLO World
 
-DONE      
-DONE  
+DONE                   
+DONE               
 
-One Two
+One Two 
 One Two
 
-ME
+ME 
 ME
 
 word 
@@ -151,7 +151,7 @@ an 'amazing'
 an 'amazing'
 
 
-an alem
+an alem 
 an alem 
 
 PUNCTUATION HANDLING
@@ -173,13 +173,13 @@ word!!!!!!!!!!!!...,,,,,,,,,??????????:::::::::;;;;;;;;;;;;;:
 2
 2
 
-z
+z 
 z
 
-AG
+AG 
 AG
 
-12
+12 
 12
 
 10
@@ -194,7 +194,7 @@ AG
 11080
 11080
 
-11080
+11080 
 11080
 
 659
@@ -227,8 +227,8 @@ DOUBLE QUOTE HANDLING
 EDGE CASES
 
 
-word(up, 101
-word(up, 101
+word (up, 101
+word (up, 101
 
 
 
@@ -251,7 +251,7 @@ hello world
 
 15
 
-abg
+abg 
 abg
 
 call a people For Real!!!!
@@ -262,7 +262,7 @@ Specific Phrases
 Hello, world! This is a TEST.'Another line'
 Hello, world! This is a TEST.'Another line'!!!!!!
 
-an and b
+an and b                                           
 an and b
 
 one, two, three...
@@ -271,7 +271,7 @@ one, two, three...
 ONE, TWO, THREE...
 ONE, TWO, THREE...
 
-FHUFH FHURHUF RHFURH
+FHUFH FHURHUF RHFURH 
 
 HURHFHR UHRF 
 
@@ -288,7 +288,7 @@ if i make you breakfast in bed just say thank you instead of: How did you get in
 
 ASDDDD
 HHHHH
-jjj
+jjj 
 
 2751
 
@@ -297,7 +297,7 @@ an 'Honest'
 
 i am "dasda" d d hsajh 'dasdadadad' dadasda '' dhkajdhka ''
 
-hihg 
+hihg
 low
 low
 
@@ -318,7 +318,7 @@ $$
 ******
 !@@@@
 ^^^^^
-cal
+cal 
 99993456789009876543456
 1099511627775
 4294967296
@@ -345,10 +345,10 @@ Harold Wilson:'I am an optimist, but an optimist who carries a raincoat.'
 
 ASKJFKASKFASJ 
 lksdlgdskg 
-sdlkfsldfks lskflsdkfsd LSKDFLSDKF LSLDFKLSDK
-MY NAME IS HELLO
-my name is hello
-LSDFL KSDLFL SDSLDKFSLKDFL KSLKDFLSDKL SLDKFKLSDKLFSDLLK LSDKKSDK
+sdlkfsldfks lskflsdkfsd LSKDFLSDKF LSLDFKLSDK 
+MY NAME IS HELLO 
+my name is hello 
+LSDFL KSDLFL SDSLDKFSLKDFL KSLKDFLSDKL SLDKFKLSDKLFSDLLK LSDKKSDK 
 lsdkfsldk lsdkfsldkf "Sldsdfsdsdsdflsdkflsd" 
 Asflkaslflk 
 aslfkaslf klakflalks alskflkl asfaskfj ajsfkaskjf kajsfks 
@@ -372,29 +372,30 @@ dfdsdsfsdfsdfs 'i am the darkness' fsskfdskfsdkfdsjfkjsdkj
 fsdfsdfsdfsdfsd 'i am not the darkness' asfasfasfasfasf
 helllloooooo dfdsdsfsdfsdfs
 sdfsfdsdfsdf. fsdfsdfsdfsdfsd.
-dont know what to WRITE
+dont know what to WRITE 
 an 'article'
 an "article"
 an article
 a a a a
 Are you an honored guest?
-DSFSDKFJSDKFSKDJFKDJFKDF
+DSFSDKFJSDKFSKDJFKDJFKDF 
 SDFSDFSDFSDFSDFSDFDSFSDFSDF 
 an honored one
 an uprising
 an union
 gfdgdfg dkgdlfgdlfgdflkgdflkgdlfkglfd 
 DFGDFGDFGDFGDFG 
-dfkgjdfkjgjdfkgjfkgjdkfjgkdjkf(())
-sdfsdf SDKLFLS DKLFSLKF
+dfkgjdfkjgjdfkgjfkgjdkfjgkdjkf (())
+sdfsdf SDKLFLS DKLFSLKF 
 afafjdskdksjfksdjkfkdskjsdkjf jfwefiwefjioewfwiefjiewewifjiwifeiwjifewifijwefji fdskflsdskdllkfslk
 almsflasfmaslmaslms 'sdfsdfsdfsdsdfsdf sdfsdfsddsf' sdfsdfsdfsdfsdfsdfsd sdf 'sdfsdfsdfsd sdsd' sfdsdsfd
 sfsdfsdsdf skdfjskfjksdjksdkfsjkdfjksd ksdjfksdkjfk are you HIIIIIIm??? skdfskdjfkjsdjk 
 aafjasslfj ajskfsakj telll meee!?
 SDFSDFSDFSDFSDFSDFDSFSDFSDF low
 
+hello hello hello (up(low(1031388))))
 
-Rphuhrthgu
+Rphuhrthgu 
 
-asfkalsfklaslkf(up ')'
-ajsfalsflsjallas lsdflks(HELLO) SLDFKLSD SLKDFLKS
+asfkalsfklaslkf (up ')'
+ajsfalsflsjallas lsdflks (HELLO) SLDFKLSD SLKDFLKS 

@@ -393,8 +393,9 @@ sfsdfsdsdf skdfjskfjksdjksdkfsjkdfjksd ksdjfksdkjfk are you HIIIIIIm ??? skdfskd
 aafjasslfj ajskfsakj telll meee !?
 sdfsdfsdfsdfsdfsdfdsfsdfsdf (up (low)) low (low(up(cap(up(hex (low))))))
 
+hello hello hello (up    (low             (fbcdc (hex     (up) ))))
 
-rphuhrthgu (cap(low(cap(low(low)))))
+rphuhrthgu (cap(low(cap                  (low(low)))))
 
 asfkalsfklaslkf (up ' )
 ajsfalsflsjallas lsdflks (hello) sldfklsd slkdflks (UP (low), 3)
