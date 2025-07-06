@@ -292,7 +292,8 @@ func normalizeSpaces(text string) string {
 	for i, line := range lines {
 		// This regex cleans up extra spaces between regular words.
 		// It runs multiple times per line to ensure all multiple spaces are reduced.
-		wordSpaceRegex := regexp.MustCompile(`(\w+)\s{2,}(\w+)`)
+		// CORRECTED REGEX: Match any non-space tokens, not just words, to handle quoted strings.
+		wordSpaceRegex := regexp.MustCompile(`([^\s]+)\s{2,}([^\s]+)`)
 		for {
 			newLine := wordSpaceRegex.ReplaceAllString(line, "$1 $2")
 			if newLine == line {
