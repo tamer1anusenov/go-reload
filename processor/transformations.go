@@ -259,15 +259,19 @@ func findWordsBeforeInLine(text string, patternPos int, count int) ([]string, []
 
 	return words, positions, quotedFlags, quoteChars
 }
-func normalizeCommandParentheses(text string, commands []string) string {
-	if len(commands) == 0 {
-		return text
-	}
-	regexPattern := `\b(` + strings.Join(commands, "|") + `)[^\S\n]+\(`
-	re := regexp.MustCompile(regexPattern)
+
+func normalizeNestedCommandParentheses(text string) string {
+	// Regex to find a word character (a command) followed by one or more
+	// NON-NEWLINE whitespace characters and then an opening parenthesis.
+	// [^\S\n]+ matches one or more whitespace characters that are NOT newlines.
+	re := regexp.MustCompile(`(\w+)[^\S\n]+\(`) // FIX IS HERE
+
+	// Loop until no more changes can be made. This ensures that we process
+	// all levels of nesting, from the inside out.
 	for {
 		originalText := text
 		text = re.ReplaceAllString(text, "$1(")
+		// If the string is stable (no changes in this iteration), we are done.
 		if text == originalText {
 			break
 		}
@@ -275,21 +279,19 @@ func normalizeCommandParentheses(text string, commands []string) string {
 	return text
 }
 
-func formatParentheses(text string) string {
-	re := regexp.MustCompile(`\(\s*(\w+)\s*\)`)
-
-	return re.ReplaceAllString(text, "($1)")
-}
-
+// normalizeSpaces is the main function you provided, now calling the corrected helper.
 func normalizeSpaces(text string) string {
-	commandKeywords := []string{"up", "low", "cap", "hex", "bin", "dec"}
-
-	text = normalizeCommandParentheses(text, commandKeywords)
-
+	text = formatQuotes(text)
+	// First, normalize nested command parentheses for strict formatting.
+	// This is the function we fixed.
+	text = normalizeNestedCommandParentheses(text)
+	// Then, apply existing general parentheses formatting.
 	text = formatParentheses(text)
 
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
+		// This regex cleans up extra spaces between regular words.
+		// It runs multiple times per line to ensure all multiple spaces are reduced.
 		wordSpaceRegex := regexp.MustCompile(`(\w+)\s{2,}(\w+)`)
 		for {
 			newLine := wordSpaceRegex.ReplaceAllString(line, "$1 $2")
@@ -308,7 +310,8 @@ func formatPunctuation(text string) string {
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
 		line = normalizeSpaces(line)
-		punctRegex := regexp.MustCompile(`\s*([.,!?:;]+)(\s*)(\w?)`)
+		// CORRECTED REGEX: Capture any non-space character (including quotes) after punctuation.
+		punctRegex := regexp.MustCompile(`\s*([.,!?:;]+)(\s*)([^\s\n]?)`)
 		line = punctRegex.ReplaceAllStringFunc(line, func(match string) string {
 			parts := punctRegex.FindStringSubmatch(match)
 			punct := parts[1]
@@ -383,43 +386,39 @@ func handleConsecutiveQuotes(line string, quoteChar rune) string {
 	})
 }
 
+func formatParentheses(text string) string {
+	parenRegex := regexp.MustCompile(`\(\s*([^()]*?)\s*\)`)
+	text = parenRegex.ReplaceAllStringFunc(text, func(match string) string {
+		content := strings.Trim(match, "()")
+		content = strings.TrimSpace(content)
+
+		content = regexp.MustCompile(`\s+`).ReplaceAllString(content, " ")
+		return "(" + content + ")"
+	})
+
+	return text
+}
+
 func fixArticles(text string) string {
 	lines := strings.Split(text, "\n")
 
 	for i, line := range lines {
-		// Updated regex to handle quotes around words
-		// Pattern: (preceding articles)(main article)(space)(optional quotes)(word)(optional quotes)
-		sequenceRegex := regexp.MustCompile(`(\b(?:[aA]n?\s+)*)([aA]n?)\s+(['"]?)([a-zA-Z]\w*)(['"]?)`)
+		sequenceRegex := regexp.MustCompile(`(\b(?:[aA]n?\s+)*)([aA]n?)\s+([a-zA-Z]\w*)`)
 
 		line = sequenceRegex.ReplaceAllStringFunc(line, func(match string) string {
 			parts := sequenceRegex.FindStringSubmatch(match)
-			if len(parts) >= 6 {
+			if len(parts) >= 4 {
 				precedingArticles := parts[1]
 				lastArticle := parts[2]
-				openQuote := parts[3]
-				targetWord := parts[4]
-				closeQuote := parts[5]
-
+				targetWord := parts[3]
 				lowerTargetWord := strings.ToLower(targetWord)
-
-				// Don't modify if the target word is itself an article
 				if lowerTargetWord == "a" || lowerTargetWord == "an" {
 					return match
 				}
 
 				firstChar := strings.ToLower(string(targetWord[0]))
-
-				// Check if word starts with vowel sound
 				needsAn := firstChar == "a" || firstChar == "e" || firstChar == "i" ||
-					firstChar == "o" || firstChar == "u"
-
-				// Special handling for 'h' - this is simplified
-				// In practice, you'd need a more sophisticated approach
-				if firstChar == "h" {
-					// For simplicity, treating 'h' words as needing 'an'
-					// Real implementation would need to handle "hour" vs "house" differently
-					needsAn = true
-				}
+					firstChar == "o" || firstChar == "u" || firstChar == "h"
 
 				var newLastArticle string
 				if needsAn {
@@ -428,7 +427,7 @@ func fixArticles(text string) string {
 					} else if lastArticle == "a" {
 						newLastArticle = "an"
 					} else {
-						newLastArticle = lastArticle // already "an" or "An"
+						newLastArticle = lastArticle
 					}
 				} else {
 					if lastArticle == "A" || lastArticle == "An" {
@@ -438,7 +437,7 @@ func fixArticles(text string) string {
 					}
 				}
 
-				return precedingArticles + newLastArticle + " " + openQuote + targetWord + closeQuote
+				return precedingArticles + newLastArticle + " " + targetWord
 			}
 			return match
 		})
